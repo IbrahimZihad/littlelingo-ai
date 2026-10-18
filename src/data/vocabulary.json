@@ -1,0 +1,194 @@
+[
+  {
+    "id": "cat",
+    "word": "Cat",
+    "emoji": "🐱",
+    "category": "animals",
+    "sentence": "This is a cat.",
+    "level": "L1"
+  },
+  {
+    "id": "dog",
+    "word": "Dog",
+    "emoji": "🐶",
+    "category": "animals",
+    "sentence": "I see a dog.",
+    "level": "L1"
+  },
+  {
+    "id": "bird",
+    "word": "Bird",
+    "emoji": "🐦",
+    "category": "animals",
+    "sentence": "The bird can fly.",
+    "level": "L1"
+  },
+  {
+    "id": "fish",
+    "word": "Fish",
+    "emoji": "🐠",
+    "category": "animals",
+    "sentence": "A fish can swim.",
+    "level": "L1"
+  },
+  {
+    "id": "red",
+    "word": "Red",
+    "emoji": "❤️",
+    "category": "colors",
+    "sentence": "The apple is red.",
+    "level": "L1"
+  },
+  {
+    "id": "blue",
+    "word": "Blue",
+    "emoji": "💙",
+    "category": "colors",
+    "sentence": "The sky is blue.",
+    "level": "L1"
+  },
+  {
+    "id": "yellow",
+    "word": "Yellow",
+    "emoji": "💛",
+    "category": "colors",
+    "sentence": "The sun is yellow.",
+    "level": "L1"
+  },
+  {
+    "id": "green",
+    "word": "Green",
+    "emoji": "💚",
+    "category": "colors",
+    "sentence": "The leaf is green.",
+    "level": "L1"
+  },
+  {
+    "id": "apple",
+    "word": "Apple",
+    "emoji": "🍎",
+    "category": "fruits",
+    "sentence": "This is an apple.",
+    "level": "L1"
+  },
+  {
+    "id": "banana",
+    "word": "Banana",
+    "emoji": "🍌",
+    "category": "fruits",
+    "sentence": "I like bananas.",
+    "level": "L1"
+  },
+  {
+    "id": "orange",
+    "word": "Orange",
+    "emoji": "🍊",
+    "category": "fruits",
+    "sentence": "An orange is a fruit.",
+    "level": "L1"
+  },
+  {
+    "id": "one",
+    "word": "One",
+    "emoji": "1️⃣",
+    "category": "numbers",
+    "sentence": "I have one ball.",
+    "level": "L1"
+  },
+  {
+    "id": "two",
+    "word": "Two",
+    "emoji": "2️⃣",
+    "category": "numbers",
+    "sentence": "I see two birds.",
+    "level": "L1"
+  },
+  {
+    "id": "three",
+    "word": "Three",
+    "emoji": "3️⃣",
+    "category": "numbers",
+    "sentence": "Three little stars.",
+    "level": "L1"
+  },
+  {
+    "id": "mom",
+    "word": "Mom",
+    "emoji": "👩",
+    "category": "family",
+    "sentence": "This is my mom.",
+    "level": "L1"
+  },
+  {
+    "id": "dad",
+    "word": "Dad",
+    "emoji": "👨",
+    "category": "family",
+    "sentence": "This is my dad.",
+    "level": "L1"
+  },
+  {
+    "id": "happy",
+    "word": "Happy",
+    "emoji": "😊",
+    "category": "feelings",
+    "sentence": "I feel happy.",
+    "level": "L1"
+  },
+  {
+    "id": "sad",
+    "word": "Sad",
+    "emoji": "😢",
+    "category": "feelings",
+    "sentence": "It is okay to feel sad.",
+    "level": "L1"
+  },
+  {
+    "id": "ball",
+    "word": "Ball",
+    "emoji": "⚽",
+    "category": "toys",
+    "sentence": "I can kick the ball.",
+    "level": "L2"
+  },
+  {
+    "id": "book",
+    "word": "Book",
+    "emoji": "📚",
+    "category": "everyday",
+    "sentence": "I read a book.",
+    "level": "L2"
+  },
+  {
+    "id": "run",
+    "word": "Run",
+    "emoji": "🏃",
+    "category": "actions",
+    "sentence": "I can run fast.",
+    "level": "L2"
+  },
+  {
+    "id": "sleep",
+    "word": "Sleep",
+    "emoji": "😴",
+    "category": "actions",
+    "sentence": "The cat is sleeping.",
+    "level": "L2"
+  },
+  {
+    "id": "calm",
+    "word": "Calm",
+    "emoji": "😌",
+    "category": "feelings",
+    "sentence": "I feel calm and safe.",
+    "level": "L2"
+  },
+  {
+    "id": "tree",
+    "word": "Tree",
+    "emoji": "🌳",
+    "category": "nature",
+    "sentence": "The tree is tall.",
+    "level": "L2"
+  }
+]

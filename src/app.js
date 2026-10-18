@@ -1,0 +1,52 @@
+import express from 'express';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
+import { hashPassword, verifyPassword, issueToken, verifyToken, newId } from './services/auth.service.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vocabulary from './data/vocabulary.json' with {type:'json'};
+import lessons from './data/lessons.json' with {type:'json'};
+import quizzes from './data/quizzes.json' with {type:'json'};
+import { fallbackReply } from './services/fallback.service.js';
+import { askGemini } from './services/gemini.service.js';
+import { detectMode } from './services/mode-detection.service.js';
+import { isUnsafe, safeText, safetyReply } from './services/safety.service.js';
+import { getProgress, masteryFor } from './services/learning-engine.service.js';
+const here=path.dirname(fileURLToPath(import.meta.url));
+export function createApp(db) {
+ const app=express(); app.disable('x-powered-by'); app.use(helmet({permissionsPolicy:{directives:{camera:[],microphone:['self'],geolocation:[]}},contentSecurityPolicy:{directives:{defaultSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'"],scriptSrc:["'self'"],imgSrc:["'self'","data:"],connectSrc:["'self'"],objectSrc:["'none'"]}}}));
+ app.use(express.json({limit:'12kb'}));
+ app.use('/api',rateLimit({windowMs:Number(process.env.RATE_LIMIT_WINDOW_MS||60000),limit:Number(process.env.RATE_LIMIT_MAX_REQUESTS||30),standardHeaders:true,legacyHeaders:false}));
+ app.get('/api/health',(req,res)=>res.json({status:'ok',aiConfigured:Boolean(process.env.GEMINI_API_KEY),timestamp:new Date().toISOString()}));
+ const authHeader = req => (req.get('authorization') || '').replace(/^Bearer\s+/i,'');
+ const requireAuth = (req,res,next) => { const user=verifyToken(authHeader(req)); if(!user)return res.status(401).json({error:'Please sign in as a caregiver.'}); req.caregiverId=user.caregiverId; next(); };
+ const ownsLearner = (db, caregiverId, learnerId) => Boolean(db.prepare('SELECT 1 FROM learners WHERE id=? AND caregiver_id=?').get(learnerId,caregiverId));
+ app.post('/api/auth/register',(req,res)=>{const schema=z.object({email:z.string().trim().email().max(254),password:z.string().min(10).max(128)});const parsed=schema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Enter a valid caregiver email and a password with at least 10 characters.'});const email=parsed.data.email.toLowerCase();if(db.prepare('SELECT 1 FROM caregivers WHERE email=?').get(email))return res.status(409).json({error:'An account with this email already exists. Please sign in.'});const caregiverId=newId(), learnerId=newId();const tx=db.transaction(()=>{db.prepare('INSERT INTO caregivers(id,email,password_hash) VALUES(?,?,?)').run(caregiverId,email,hashPassword(parsed.data.password));db.prepare('INSERT INTO learners(id,caregiver_id) VALUES(?,?)').run(learnerId,caregiverId);});tx();res.status(201).json({token:issueToken(caregiverId),learnerId,email,expiresIn:604800});});
+ app.post('/api/auth/login',(req,res)=>{const schema=z.object({email:z.string().trim().email().max(254),password:z.string().min(1).max(128)});const parsed=schema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Enter your caregiver email and password.'});const account=db.prepare('SELECT id,email,password_hash FROM caregivers WHERE email=?').get(parsed.data.email.toLowerCase());if(!account||!verifyPassword(parsed.data.password,account.password_hash))return res.status(401).json({error:'Email or password is incorrect.'});let learner=db.prepare('SELECT id FROM learners WHERE caregiver_id=? ORDER BY created_at LIMIT 1').get(account.id);if(!learner){const id=newId();db.prepare('INSERT INTO learners(id,caregiver_id) VALUES(?,?)').run(id,account.id);learner={id};}res.json({token:issueToken(account.id),learnerId:learner.id,email:account.email,expiresIn:604800});});
+ app.get('/api/auth/me',requireAuth,(req,res)=>{const account=db.prepare('SELECT email FROM caregivers WHERE id=?').get(req.caregiverId);if(!account)return res.status(401).json({error:'Please sign in again.'});const learners=db.prepare('SELECT id,level,stars,lessons_completed AS lessonsCompleted FROM learners WHERE caregiver_id=? ORDER BY created_at').all(req.caregiverId);res.json({email:account.email,learners});});
+ app.post('/api/auth/logout',(req,res)=>res.json({ok:true}));
+ app.get('/api/lessons',(req,res)=>{const level=['L1','L2','L3'].includes(req.query.level)?req.query.level:'L1';res.json(lessons.filter(l=>l.level===level));});
+ app.get('/api/lessons/:id',(req,res)=>{const lesson=lessons.find(l=>l.id===req.params.id); if(!lesson)return res.status(404).json({error:'Lesson not found'});res.json(lesson);});
+ app.get('/api/vocabulary',(req,res)=>{let data=vocabulary;if(req.query.category)data=data.filter(v=>v.category===String(req.query.category).slice(0,30));if(req.query.level)data=data.filter(v=>v.level===req.query.level || req.query.level==='L3');res.json(data);});
+ app.get('/api/quizzes',(req,res)=>{let data=quizzes;if(req.query.level)data=data.filter(q=>q.level===req.query.level);if(req.query.category)data=data.filter(q=>q.category===req.query.category);res.json(data.map(({answer,...q})=>q));});
+ const chatSchema=z.object({learnerId:z.string().regex(/^[a-f0-9-]{16,40}$/i),message:z.string().trim().min(1).max(500),context:z.object({level:z.enum(['L1','L2','L3']).optional(),currentTopic:z.string().max(40).optional(),currentActivity:z.string().max(40).optional(),history:z.array(z.object({role:z.enum(['child','buddy']),text:z.string().max(250)})).max(6).optional()}).optional()});
+ app.post('/api/chat',requireAuth,async(req,res)=>{const started=Date.now();const parsed=chatSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Please send a short message and try again.'});const {learnerId,message,context={}}=parsed.data;
+  if(!ownsLearner(db,req.caregiverId,learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});
+  let result,source='fallback';if(isUnsafe(message)){result={mode:'SAFETY_REDIRECT',message:safetyReply(),suggestedActivity:null,learningFeedback:null};}else{
+   const mode=detectMode(message,context).mode;
+   const quick=/^(hi|hello|hey|thanks|thank you)[!. ]*$/i.test(message);
+   if(!quick){result=await askGemini(message,{level:context.level||'L1',currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,recentTurns:(context.history||[]).slice(-4)});if(result)source='gemini';}
+   if(!result)result=fallbackReply(message,context);
+   if(mode==='SAFETY_REDIRECT'){result={mode,message:safetyReply(),suggestedActivity:null,learningFeedback:null};}
+  }
+  res.json({...result,source,durationMs:Date.now()-started});
+ });
+ const attemptSchema=z.object({learnerId:z.string().regex(/^[a-f0-9-]{16,40}$/i),quizId:z.string().min(1).max(50),selectedItemId:z.string().min(1).max(50),sessionId:z.string().regex(/^[a-f0-9-]{16,40}$/i)});
+ app.post('/api/progress/attempt',requireAuth,(req,res)=>{const p=attemptSchema.safeParse(req.body);if(!p.success)return res.status(400).json({error:'Invalid learning attempt.'});const a=p.data;if(!ownsLearner(db,req.caregiverId,a.learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});const quiz=quizzes.find(q=>q.id===a.quizId);if(!quiz)return res.status(404).json({error:'Quiz not found.'});if(!quiz.options.some(o=>o.itemId===a.selectedItemId))return res.status(400).json({error:'Invalid quiz answer.'});const correct=a.selectedItemId===quiz.answer;const itemId=correct?quiz.answer:a.selectedItemId;const transaction=db.transaction(()=>{db.prepare('INSERT OR IGNORE INTO learners(id) VALUES(?)').run(a.learnerId);db.prepare('INSERT INTO attempts(learner_id,item_id,skill,correct,session_id) VALUES(?,?,?,?,?)').run(a.learnerId,itemId,quiz.category,correct?1:0,a.sessionId);db.prepare('UPDATE learners SET stars=stars+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(correct?1:0,a.learnerId);});transaction();res.json({ok:true,correct,correctItemId:quiz.answer,mastery:masteryFor(db,a.learnerId,quiz.answer),progress:getProgress(db,a.learnerId)});});
+ app.get('/api/progress/:learnerId',requireAuth,(req,res)=>{if(!/^[a-f0-9-]{16,40}$/i.test(req.params.learnerId))return res.status(400).json({error:'Invalid learner ID'});if(!ownsLearner(db,req.caregiverId,req.params.learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});res.json(getProgress(db,req.params.learnerId));});
+ app.post('/api/progress/reset',requireAuth,(req,res)=>{const id=req.get('x-learner-id');if(!id||!/^[a-f0-9-]{16,40}$/i.test(id))return res.status(400).json({error:'Learner ID required.'});if(!ownsLearner(db,req.caregiverId,id))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});const tx=db.transaction(()=>{db.prepare('DELETE FROM attempts WHERE learner_id=?').run(id);db.prepare('DELETE FROM activities WHERE learner_id=?').run(id);db.prepare("UPDATE learners SET level='L1',stars=0,lessons_completed=0,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(id);});tx();res.json({ok:true});});
+ app.use(express.static(path.join(here,'../public')));app.get('/{*path}',(req,res)=>res.sendFile(path.join(here,'../public/index.html')));
+ app.use((err,req,res,next)=>{console.error('Request failed:',err?.message);if(res.headersSent)return next(err);res.status(500).json({error:'Something went wrong. Please try again.'});});return app;
+}

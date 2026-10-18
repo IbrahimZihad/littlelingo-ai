@@ -1,0 +1,98 @@
+[
+  {
+    "id": "colors-1",
+    "level": "L1",
+    "category": "colors",
+    "question": "Which one is blue?",
+    "options": [
+      {
+        "label": "Blue",
+        "emoji": "💙",
+        "itemId": "blue"
+      },
+      {
+        "label": "Red",
+        "emoji": "❤️",
+        "itemId": "red"
+      },
+      {
+        "label": "Yellow",
+        "emoji": "💛",
+        "itemId": "yellow"
+      }
+    ],
+    "answer": "blue"
+  },
+  {
+    "id": "animals-1",
+    "level": "L1",
+    "category": "animals",
+    "question": "Which animal says meow?",
+    "options": [
+      {
+        "label": "Cat",
+        "emoji": "🐱",
+        "itemId": "cat"
+      },
+      {
+        "label": "Dog",
+        "emoji": "🐶",
+        "itemId": "dog"
+      },
+      {
+        "label": "Fish",
+        "emoji": "🐠",
+        "itemId": "fish"
+      }
+    ],
+    "answer": "cat"
+  },
+  {
+    "id": "fruits-1",
+    "level": "L1",
+    "category": "fruits",
+    "question": "Find the apple.",
+    "options": [
+      {
+        "label": "Apple",
+        "emoji": "🍎",
+        "itemId": "apple"
+      },
+      {
+        "label": "Banana",
+        "emoji": "🍌",
+        "itemId": "banana"
+      },
+      {
+        "label": "Orange",
+        "emoji": "🍊",
+        "itemId": "orange"
+      }
+    ],
+    "answer": "apple"
+  },
+  {
+    "id": "numbers-1",
+    "level": "L1",
+    "category": "numbers",
+    "question": "What comes after one?",
+    "options": [
+      {
+        "label": "One",
+        "emoji": "1️⃣",
+        "itemId": "one"
+      },
+      {
+        "label": "Two",
+        "emoji": "2️⃣",
+        "itemId": "two"
+      },
+      {
+        "label": "Three",
+        "emoji": "3️⃣",
+        "itemId": "three"
+      }
+    ],
+    "answer": "two"
+  }
+]

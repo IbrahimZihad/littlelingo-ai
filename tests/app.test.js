@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import { detectMode } from '../src/services/mode-detection.service.js';import { fallbackReply } from '../src/services/fallback.service.js';import { validateTutorResponse } from '../src/services/safety.service.js';
+test('classifies learning requests',()=>assert.equal(detectMode('Please teach me a word').mode,'LEARNING'));
+test('classifies emotional support',()=>assert.equal(detectMode('I feel sad').mode,'EMOTIONAL_SUPPORT'));
+test('defaults to conversation',()=>assert.equal(detectMode('I saw a butterfly').mode,'CONVERSATION'));
+test('fallback is available without Gemini',()=>assert.match(fallbackReply('hello').message,/Hello/i));
+test('rejects malformed tutor responses',()=>assert.equal(validateTutorResponse({message:'hello'}),null));
+test('validates safe structured tutor response',()=>assert.equal(validateTutorResponse({mode:'CONVERSATION',message:'Hello, friend!'}).message,'Hello, friend!'));
+import { hashPassword, verifyPassword, issueToken, verifyToken } from '../src/services/auth.service.js';
+test('passwords are hashed and verified without storing plaintext',()=>{const hash=hashPassword('a-long-caregiver-password');assert.notEqual(hash,'a-long-caregiver-password');assert.equal(verifyPassword('a-long-caregiver-password',hash),true);assert.equal(verifyPassword('wrong-password',hash),false);});
+test('caregiver tokens verify and reject tampering',()=>{const token=issueToken('caregiver-test-id');assert.equal(verifyToken(token)?.caregiverId,'caregiver-test-id');assert.equal(verifyToken(token+'x'),null);});
+test('fallback gives a word-specific practice response',()=>{const reply=fallbackReply('I want to practice the word Cat. Please help me say it and use it in a simple sentence.').message;assert.match(reply,/The word is “Cat”/);assert.match(reply,/The cat is cute\./);assert.doesNotMatch(reply,/Which animal do you like/);});
