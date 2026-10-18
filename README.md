@@ -31,7 +31,7 @@ The application works without a Gemini key. To enable AI, create a Gemini API ke
 - `GEMINI_API_KEY`: optional server-only API key.
 - `GEMINI_MODEL`: model name available to your account.
 - `DATABASE_PATH`: SQLite file path; parent directory is created automatically.
-- `AI_TIMEOUT_MS`: maximum AI wait before fallback (default 1300).
+- `AI_TIMEOUT_MS`: maximum AI wait before fallback in milliseconds (default 10000).
 - `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`: API rate limit.
 - `RESET_TOKEN`: optional shared token for administrative progress reset. Configure carefully; it is not a replacement for caregiver authentication.
 

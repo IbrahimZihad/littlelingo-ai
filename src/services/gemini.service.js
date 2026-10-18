@@ -8,10 +8,17 @@ export async function askGemini(message, context={}) {
  const prompt=`Learner context: ${JSON.stringify(context).slice(0,1500)}
 Child's message: ${String(message).slice(0,500)}
 Respond as JSON.`;
- const timeout=Number(process.env.AI_TIMEOUT_MS||1300);
+ const configuredTimeout=Number(process.env.AI_TIMEOUT_MS);
+ const timeout=Number.isFinite(configuredTimeout)&&configuredTimeout>0?configuredTimeout:10000;
+ let timeoutId;
  try {
-  const result=await Promise.race([ai.models.generateContent({model,contents:prompt,config:{systemInstruction:SYSTEM,responseMimeType:'application/json',temperature:0.5,maxOutputTokens:120}}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),timeout))]);
+  const result=await Promise.race([ai.models.generateContent({model,contents:prompt,config:{systemInstruction:SYSTEM,responseMimeType:'application/json',temperature:0.5,maxOutputTokens:120}}),new Promise((_,reject)=>{timeoutId=setTimeout(()=>reject(new Error('Gemini request timed out')),timeout);})]);
   let raw=result.text || ''; raw=raw.replace(/^```json\s*/,'').replace(/```$/,'').trim();
   return validateTutorResponse(JSON.parse(raw));
- } catch { return null; }
+ } catch(error) {
+  console.error(`Gemini request failed (${error instanceof Error?error.name:'unknown error'}); using local fallback.`);
+  return null;
+ } finally {
+  clearTimeout(timeoutId);
+ }
 }
