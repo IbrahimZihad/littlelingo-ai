@@ -106,3 +106,46 @@ if (wordGrid) {
   wordExplorerTools.innerHTML = '<p class="word-count" id="wordCount" aria-live="polite">Let’s find a new word!</p><p class="word-tip"><span aria-hidden="true">✨</span> Tap Listen to hear a word, or Practice to play with Buddy.</p>';
   wordGrid.before(wordExplorerTools);
 }
+
+const chatCard = document.querySelector('.chat-card');
+if (chatCard) {
+  chatCard.classList.add('buddy-chat-card');
+
+  const buddyAvatar = chatCard.querySelector('.buddy-banner > span:first-child');
+  buddyAvatar?.classList.add('buddy-avatar');
+  buddyAvatar?.setAttribute('aria-hidden', 'true');
+
+  const buddyDescription = chatCard.querySelector('.buddy-banner small');
+  if (buddyDescription) buddyDescription.textContent = 'I love stories, words, and games!';
+
+  const buddyStatus = chatCard.querySelector('.online-dot');
+  if (buddyStatus) {
+    buddyStatus.textContent = '● Ready to chat!';
+    buddyStatus.setAttribute('aria-label', 'Buddy is ready to chat');
+  }
+
+  const messages = chatCard.querySelector('#messages');
+  messages?.setAttribute('role', 'log');
+  messages?.setAttribute('aria-label', 'Chat with Buddy');
+  messages?.setAttribute('aria-relevant', 'additions');
+
+  const suggestions = chatCard.querySelector('.suggestions');
+  if (suggestions) {
+    const suggestionLabel = document.createElement('p');
+    suggestionLabel.className = 'buddy-suggestion-label';
+    suggestionLabel.textContent = 'Pick something to say:';
+    suggestions.before(suggestionLabel);
+    suggestions.setAttribute('aria-label', 'Try one of these messages');
+  }
+
+  const chatInput = chatCard.querySelector('#chatInput');
+  chatInput?.setAttribute('placeholder', 'Say something to Buddy…');
+  chatInput?.setAttribute('aria-label', 'Type a message to Buddy');
+
+  const micButton = chatCard.querySelector('#micBtn');
+  micButton?.setAttribute('aria-label', 'Talk to Buddy using your voice');
+  if (micButton) micButton.title = 'Talk to Buddy using your voice';
+
+  const sendButton = chatCard.querySelector('.send-btn');
+  sendButton?.setAttribute('aria-label', 'Send message to Buddy');
+}
