@@ -56,14 +56,16 @@ npm run benchmark
 ```
 The benchmark measures health endpoint round-trip latency, not Gemini response latency. For production evaluation, benchmark `/api/chat` with and without Gemini, record sample size, deployment environment, P50/P95/max, success and fallback rates. Do not claim a two-second guarantee based on the health check.
 
-## Deployment (Render example)
-1. Push this folder to a Git repository.
-2. Create a Render web service from the repository, or use `render.yaml` as a starting point.
-3. Ensure the service has a persistent disk mounted at `/var/data` and set `DATABASE_PATH=/var/data/littlelingo.sqlite`.
-4. Add `GEMINI_API_KEY` in the host's secret environment settings if using Gemini. Set `GEMINI_MODEL` to a supported model.
-5. Deploy, then verify `https://YOUR-SERVICE.onrender.com/api/health` and open the root URL. A public URL is not included because this project has not been deployed from this environment and no hosting account was provided.
+## Deployment (Render dashboard)
+This project can be deployed manually without a `render.yaml` file:
+1. Push the project to a GitHub repository.
+2. In the Render Dashboard, create a **New → Web Service**, connect the repository, and select the repository root as the root directory.
+3. Choose the Node runtime. Set the build command to `npm install` and the start command to `npm start`.
+4. Set the health check path to `/api/health`.
+5. Add `NODE_ENV=production` and a long, random `AUTH_SECRET` under the service's environment variables. Optionally set `GEMINI_API_KEY` to enable Gemini. Render provides `PORT`; `DATABASE_PATH` is optional and defaults to `./data/littlelingo.sqlite`.
+6. Choose a plan, create the service, and deploy. Open the service URL for the frontend and `/api/health` to check the API.
 
-SQLite persistence requires a persistent volume. Confirm the hosting plan supports disks; otherwise use a durable managed database. Do not scale multiple stateless instances against separate local SQLite files.
+On a free service, the filesystem is ephemeral, so the SQLite database and saved learner progress can be lost after restarts or redeploys. For persistent progress, use a hosting plan that supports a persistent disk mounted at `/var/data` and set `DATABASE_PATH=/var/data/littlelingo.sqlite`, or use a durable managed database. Do not scale multiple instances against separate local SQLite files.
 
 ## Child safety and privacy
 This project is a starter implementation, not a safety-certified product. Safety keyword rules are limited and cannot guarantee detection. Review data flows, obtain appropriate caregiver consent, publish a privacy notice, establish deletion and retention policies, and obtain legal review for applicable child privacy laws before production use. If Gemini is enabled, child messages and bounded context may be sent to Google. Adult supervision is recommended. Browser speech behavior varies; recognition is not a validated pronunciation assessment.
@@ -90,7 +92,7 @@ This project is a starter implementation, not a safety-certified product. Safety
 
 The app now provides caregiver email/password registration and sign-in. Passwords are stored as salted scrypt hashes; the browser receives a signed, seven-day bearer token. A random learner profile is created for the caregiver, and quiz attempts, stars, mastery, and level progress are stored in SQLite. Progress and chat endpoints require authentication and verify that the learner belongs to the signed-in caregiver. No child real name is required. The token is held in `sessionStorage`, so caregivers may need to sign in again after closing the browser; progress remains in the database.
 
-Set `AUTH_SECRET` to a long, randomly generated secret in production. Never use the development fallback secret on a public deployment. On Render, set the `AUTH_SECRET` environment variable in the service dashboard. The SQLite database must be on a persistent disk.
+Set `AUTH_SECRET` to a long, randomly generated secret in production. Never use the development fallback secret on a public deployment. On Render, set the `AUTH_SECRET` environment variable in the service dashboard. SQLite data needs a persistent disk or managed database if it must survive service restarts and redeploys.
 
 ### Voice and microphone checks
 
