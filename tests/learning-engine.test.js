@@ -8,6 +8,8 @@ import { createApp } from '../src/app.js';
 import { issueToken } from '../src/services/auth.service.js';
 import { getProgress } from '../src/services/learning-engine.service.js';
 
+const vocabulary = JSON.parse(fs.readFileSync(new URL('../src/data/vocabulary.json', import.meta.url), 'utf8'));
+
 test('Word Explorer progress counts each practiced word once and follows the selected level', () => {
   const db = new Database(':memory:');
   db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
@@ -77,6 +79,27 @@ test('Word Explorer practice and listening update caregiver dashboard counts', a
 
     const repeatedPractice = await fetch(`${url}/practice`, { method: 'POST', headers, body: JSON.stringify({ learnerId, itemId: 'cat' }) });
     assert.equal((await repeatedPractice.json()).progress.totalWordsPracticed, 1);
+
+    let levelOneResult;
+    for (const word of vocabulary.filter(item => item.level === 'L1' && item.id !== 'cat')) {
+      const response = await fetch(`${url}/practice`, { method: 'POST', headers, body: JSON.stringify({ learnerId, itemId: word.id }) });
+      assert.equal(response.status, 200);
+      levelOneResult = await response.json();
+    }
+    assert.equal(levelOneResult.levelAdvanced, true);
+    assert.equal(levelOneResult.previousLevel, 'L1');
+    assert.equal(levelOneResult.progress.level, 'L2');
+    assert.equal(levelOneResult.progress.progress, 0);
+
+    let levelTwoResult;
+    for (const word of vocabulary.filter(item => item.level === 'L2')) {
+      const response = await fetch(`${url}/practice`, { method: 'POST', headers, body: JSON.stringify({ learnerId, itemId: word.id }) });
+      assert.equal(response.status, 200);
+      levelTwoResult = await response.json();
+    }
+    assert.equal(levelTwoResult.levelAdvanced, true);
+    assert.equal(levelTwoResult.previousLevel, 'L2');
+    assert.equal(levelTwoResult.progress.level, 'L3');
   } finally {
     server.close();
     await once(server, 'close');
