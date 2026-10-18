@@ -1863,3 +1863,79 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .action-card > span { transition: none; }
 }
+
+.word-card .word-emoji.word-number,
+.lesson-word-card .word-number {
+  display: grid;
+  width: auto;
+  min-width: 76px;
+  height: 76px;
+  place-items: center;
+  margin: 0 auto 10px;
+  padding-inline: 12px;
+  border: 3px solid #fff;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #7050d8, #e8549a 62%, #ff9f4b);
+  box-shadow: 0 8px 18px rgb(93 58 164 / 24%);
+  color: #fff;
+  font-family: ui-rounded, "Trebuchet MS", system-ui, sans-serif;
+  font-size: 2.25rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.lesson-word-card .word-number {
+  margin-inline: 0;
+}
+
+.quiz-options {
+  align-items: stretch;
+}
+
+.quiz-option.is-number-option {
+  min-width: 0;
+  min-height: 126px;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 6px;
+}
+
+.quiz-option .quiz-number-tile {
+  display: grid;
+  width: clamp(52px, 11vw, 68px);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #7050d8, #e8549a 62%, #ff9f4b);
+  box-shadow: 0 6px 13px rgb(93 58 164 / 22%);
+  color: #fff;
+  font-size: clamp(1.25rem, 4vw, 1.8rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.quiz-option .quiz-number-name {
+  color: #34425b;
+  font-size: clamp(.72rem, 2.5vw, .88rem);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+  .quiz-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .quiz-option.is-number-option {
+    min-height: 105px;
+    padding: 9px 3px;
+  }
+
+  .quiz-option .quiz-number-tile {
+    width: 48px;
+    border-radius: 14px;
+  }
+}

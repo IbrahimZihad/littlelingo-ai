@@ -79,17 +79,17 @@
     "options": [
       {
         "label": "One",
-        "emoji": "1️⃣",
+        "emoji": "🔢",
         "itemId": "one"
       },
       {
         "label": "Two",
-        "emoji": "2️⃣",
+        "emoji": "🔢",
         "itemId": "two"
       },
       {
         "label": "Three",
-        "emoji": "3️⃣",
+        "emoji": "🔢",
         "itemId": "three"
       }
     ],

@@ -38,7 +38,7 @@ const levelOneNumbers = Array.from({ length: 7 }, (_, index) => {
   return {
     id: `number-${name}`,
     word: `${number} (${name})`,
-    emoji: `${number}️⃣`,
+    emoji: '🔢',
     category: 'numbers',
     sentence: `Let's count ${number} ${number === 1 ? 'star' : 'stars'}!`,
     level: 'L1'

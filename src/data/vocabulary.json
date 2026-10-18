@@ -90,7 +90,7 @@
   {
     "id": "one",
     "word": "One",
-    "emoji": "1️⃣",
+    "emoji": "🔢",
     "category": "numbers",
     "sentence": "I have one ball.",
     "level": "L1"
@@ -98,7 +98,7 @@
   {
     "id": "two",
     "word": "Two",
-    "emoji": "2️⃣",
+    "emoji": "🔢",
     "category": "numbers",
     "sentence": "I see two birds.",
     "level": "L1"
@@ -106,7 +106,7 @@
   {
     "id": "three",
     "word": "Three",
-    "emoji": "3️⃣",
+    "emoji": "🔢",
     "category": "numbers",
     "sentence": "Three little stars.",
     "level": "L1"
