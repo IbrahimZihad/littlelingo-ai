@@ -6,7 +6,8 @@ import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { createApp } from '../src/app.js';
 import { issueToken } from '../src/services/auth.service.js';
-import { getProgress } from '../src/services/learning-engine.service.js';
+import { getLearnerContext, getProgress } from '../src/services/learning-engine.service.js';
+import { fallbackReply } from '../src/services/fallback.service.js';
 
 const vocabulary = JSON.parse(fs.readFileSync(new URL('../src/data/vocabulary.json', import.meta.url), 'utf8'));
 
@@ -50,6 +51,40 @@ test('Quiz mastery no longer advances the learner level automatically', () => {
   assert.equal(progress.masteredWords, 4);
   assert.equal(progress.level, 'L1');
   db.close();
+});
+
+test('Buddy learner context includes level, practiced words, and recent quiz results', () => {
+  const db = new Database(':memory:');
+  db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
+  db.prepare('INSERT INTO learners(id, level) VALUES(?, ?)').run('learner-context', 'L2');
+  db.prepare('INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)').run('learner-context', 'cat');
+  db.prepare('INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)').run('learner-context', 'dog');
+  const attempt = db.prepare('INSERT INTO attempts(learner_id, item_id, skill, correct, session_id) VALUES(?, ?, ?, ?, ?)');
+  attempt.run('learner-context', 'cat', 'animals', 0, 'session-1');
+  attempt.run('learner-context', 'dog', 'animals', 1, 'session-1');
+
+  const context = getLearnerContext(db, 'learner-context');
+  assert.equal(context.level, 'L2');
+  assert.deepEqual(context.learningHistory.recentWords, ['Dog', 'Cat']);
+  assert.deepEqual(context.learningHistory.recentQuizResults.map(result => result.result), ['correct', 'needs-practice']);
+  assert.equal(context.learningHistory.wordsPracticed, 2);
+  db.close();
+});
+
+test('Fallback word teaching follows learner level and avoids a recently practiced word', () => {
+  const levelWords = vocabulary.filter(item => item.level === 'L2');
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const reply = fallbackReply('Teach me a word', {
+      level: 'L2',
+      learningHistory: { recentWords: [levelWords[0].word] }
+    });
+    assert.match(reply.message, new RegExp(levelWords[1].word));
+    assert.doesNotMatch(reply.message, new RegExp(levelWords[0].word));
+  } finally {
+    Math.random = originalRandom;
+  }
 });
 
 test('Word Explorer practice and listening update caregiver dashboard counts', async () => {

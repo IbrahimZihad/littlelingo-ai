@@ -22,3 +22,25 @@ export function getProgress(db, learnerId) {
  const progress=levelWords.length?Math.round(practicedWords/levelWords.length*100):0;
  return {learnerId,level,stars:learner.stars,lessonsCompleted:learner.lessons_completed,attempts:total,accuracy,masteredWords:mastered,practicedWords,totalWords:levelWords.length,totalWordsPracticed,progress};
 }
+
+export function getLearnerContext(db, learnerId) {
+ const progress=getProgress(db,learnerId);
+ if(!progress) return null;
+ const recentPractices=db.prepare('SELECT item_id FROM word_practices WHERE learner_id=? ORDER BY rowid DESC LIMIT 6').all(learnerId);
+ const recentAttempts=db.prepare('SELECT item_id, skill, correct FROM attempts WHERE learner_id=? ORDER BY id DESC LIMIT 4').all(learnerId);
+ return {
+  level:progress.level,
+  learningHistory:{
+   masteredWords:progress.masteredWords,
+   wordsPracticed:progress.totalWordsPracticed,
+   lessonsCompleted:progress.lessonsCompleted,
+   quizAccuracy:progress.accuracy,
+   recentWords:recentPractices.map(({item_id})=>vocabulary.find(word=>word.id===item_id)?.word).filter(Boolean),
+   recentQuizResults:recentAttempts.map(({item_id,skill,correct})=>({
+    word:vocabulary.find(word=>word.id===item_id)?.word||null,
+    skill,
+    result:correct?'correct':'needs-practice'
+   }))
+  }
+ };
+}

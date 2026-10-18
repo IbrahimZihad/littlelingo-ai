@@ -22,7 +22,7 @@ export function fallbackReply(message, context={}) {
  else if(/\b(animal|cat|dog|bird|fish)\b/.test(m)) reply="Animals are fun to learn about! 🐱 A cat says meow. Which animal do you like?";
  else if(mode==='ENGAGEMENT') reply="Let's play a guessing game! 🐻 I am thinking of a fruit that can be red or green. What is it?";
  else if(mode==='CELEBRATION') reply="Hooray! 🌟 You worked hard and tried your best. Would you like another little challenge?";
- else if(/\b(learn|teach|practice)\b/.test(m)) { const item=vocabulary[Math.floor(Math.random()*vocabulary.length)]; reply=`Let's learn a word! ${item.emoji} ${item.word}. ${item.sentence} Can you say ${item.word}?`; }
+ else if(/\b(learn|teach|practice)\b/.test(m)) { const level=context.level||'L1';const levelWords=vocabulary.filter(item=>level==='L3'||item.level===level);const practiced=new Set(context.learningHistory?.recentWords||[]);const freshWords=levelWords.filter(item=>!practiced.has(item.word));const choices=freshWords.length?freshWords:levelWords;const item=choices[Math.floor(Math.random()*choices.length)]||vocabulary[0];reply=`Let's learn a word! ${item.emoji} ${item.word}. ${item.sentence} Can you say ${item.word}?`; }
  else reply="That sounds interesting! 😊 Let's explore together. What would you like to tell me?";
  return {mode,message:reply,suggestedActivity:mode==='ENGAGEMENT'?'Play a guessing game':null,learningFeedback:null};
 }

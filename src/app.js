@@ -13,7 +13,7 @@ import { fallbackReply } from './services/fallback.service.js';
 import { askGemini } from './services/gemini.service.js';
 import { detectMode } from './services/mode-detection.service.js';
 import { isUnsafe, safeText, safetyReply } from './services/safety.service.js';
-import { getProgress, masteryFor } from './services/learning-engine.service.js';
+import { getLearnerContext, getProgress, masteryFor } from './services/learning-engine.service.js';
 const here=path.dirname(fileURLToPath(import.meta.url));
 export function createApp(db) {
  const app=express(); app.disable('x-powered-by'); app.use(helmet({permissionsPolicy:{directives:{camera:[],microphone:['self'],geolocation:[]}},contentSecurityPolicy:{directives:{defaultSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'"],scriptSrc:["'self'"],imgSrc:["'self'","data:"],connectSrc:["'self'"],objectSrc:["'none'"]}}}));
@@ -34,11 +34,13 @@ export function createApp(db) {
  const chatSchema=z.object({learnerId:z.string().regex(/^[a-f0-9-]{16,40}$/i),message:z.string().trim().min(1).max(500),context:z.object({level:z.enum(['L1','L2','L3']).optional(),currentTopic:z.string().max(40).optional(),currentActivity:z.string().max(40).optional(),history:z.array(z.object({role:z.enum(['child','buddy']),text:z.string().max(250)})).max(6).optional()}).optional()});
  app.post('/api/chat',requireAuth,async(req,res)=>{const started=Date.now();const parsed=chatSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Please send a short message and try again.'});const {learnerId,message,context={}}=parsed.data;
   if(!ownsLearner(db,req.caregiverId,learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});
+  const learnerContext=getLearnerContext(db,learnerId);
+  const responseContext={...learnerContext,currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,recentTurns:(context.history||[]).slice(-4)};
   let result,source='fallback';if(isUnsafe(message)){result={mode:'SAFETY_REDIRECT',message:safetyReply(),suggestedActivity:null,learningFeedback:null};}else{
-   const mode=detectMode(message,context).mode;
+   const mode=detectMode(message,responseContext).mode;
    const quick=/^(hi|hello|hey|thanks|thank you)[!. ]*$/i.test(message);
-   if(!quick){result=await askGemini(message,{level:context.level||'L1',currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,recentTurns:(context.history||[]).slice(-4)});if(result)source='gemini';}
-   if(!result)result=fallbackReply(message,context);
+   if(!quick){result=await askGemini(message,responseContext);if(result)source='gemini';}
+   if(!result)result=fallbackReply(message,responseContext);
    if(mode==='SAFETY_REDIRECT'){result={mode,message:safetyReply(),suggestedActivity:null,learningFeedback:null};}
   }
   res.json({...result,source,durationMs:Date.now()-started});
