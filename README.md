@@ -1,105 +1,132 @@
 # LittleLingo AI
 
-A playful English-learning web app for children under seven. It includes Buddy chat, vocabulary cards, quizzes, feelings vocabulary, optional browser voice features, a Node/Express API, SQLite progress tracking, optional Gemini integration and a deterministic fallback.
+LittleLingo AI is a responsive English-learning web app for young children. A single Node.js/Express service serves the browser app and REST API. Caregivers create an account and learner profile; Buddy combines saved learning progress with the current conversation and can use optional Gemini responses or a local fallback.
 
 ## Features
-- Responsive mobile-first UI with mascot and dashboard.
-- L1/L2/L3 lesson structure and bundled vocabulary.
-- Text chat with local fallback and optional Gemini.
-- Mode and mood detection lets Buddy switch between conversation, play, emotional support, celebration, and learning when requested.
-- Word Explorer, quiz feedback, stars and progress tracking.
-- Word Explorer practice progress and caregiver-selectable beginner, intermediate, and expert levels.
+- Responsive browser interface with dashboard, Word Explorer, lessons, quizzes, feelings vocabulary, and Buddy.
+- Three learning levels: L1 Beginner, L2 Intermediate, and L3 Expert. Caregivers can select a level manually; completing all words in a level advances to the next level automatically.
+- Progress saved in SQLite, including uniquely practiced words, quiz attempts, stars, and lessons played.
+- Caregiver registration and sign-in. Passwords are stored as salted scrypt hashes; authenticated API access uses a signed bearer token that expires after seven days.
+- Buddy detects conversation, learning, engagement, celebration, emotional-support, and safety-redirect modes. It adapts to the learner's saved level and recent progress without turning every conversation into a lesson.
+- Optional Gemini integration with response validation, timeout, and local fallback. The app works without a Gemini API key.
 - Browser text-to-speech and speech recognition where supported.
-- Anonymous learner ID; no required registration or real name.
-- API validation, Helmet security headers, rate limiting and SQLite persistence.
+- API input validation, Helmet security headers, rate limiting, and learner ownership checks.
 
 ## Requirements
+
 Node.js 20 or newer and npm. `better-sqlite3` may require a supported prebuilt binary or local build tools on your platform.
 
 ## Local setup
-```bash
+
+```powershell
 npm install
-cp .env.example .env
 npm start
 ```
-Open http://localhost:5000. On Windows Command Prompt, use `copy .env.example .env` instead of `cp`.
 
-The application works without a Gemini key. To enable AI, create a Gemini API key through Google's AI developer tooling, set `GEMINI_API_KEY` in `.env`, and set `GEMINI_MODEL` to a model available to your account. Never put the key in `public/` or commit `.env`. Provider availability, quotas and pricing can change.
+Open <http://localhost:5000>. The app works locally without a `.env` file. To configure optional services or a custom database path, create a `.env` file in the project root with the variables below. The server loads it at startup.
+
+The app works without Gemini. To enable it, create an API key through Google's AI developer tooling and set `GEMINI_API_KEY` in `.env`. Set `GEMINI_MODEL` to a model available to your account. Keep the key server-side; never put it in `public/` or commit it. Provider availability, quotas, and pricing can change.
 
 ## Environment variables
-- `PORT`: server port (default 5000).
-- `GEMINI_API_KEY`: optional server-only API key.
-- `GEMINI_MODEL`: model name available to your account.
-- `DATABASE_PATH`: SQLite file path; parent directory is created automatically.
-- `AI_TIMEOUT_MS`: maximum AI wait before fallback in milliseconds (default 10000).
-- `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`: API rate limit.
-- `RESET_TOKEN`: optional shared token for administrative progress reset. Configure carefully; it is not a replacement for caregiver authentication.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `PORT` | No | HTTP port; defaults to `5000`. Hosting platforms such as Render provide this value. |
+| `AUTH_SECRET` | Production | Long, random secret used to sign caregiver bearer tokens. There is a development-only fallback; caregiver authentication on a production deployment requires this value. |
+| `DATABASE_PATH` | No | SQLite file path. Defaults to `./data/littlelingo.sqlite`, relative to the process working directory. The database directory is created automatically. |
+| `GEMINI_API_KEY` | No | Server-side Gemini API key. Without it, Buddy uses local fallback responses. |
+| `GEMINI_MODEL` | No | Gemini model name; defaults to `gemini-2.5-flash`. |
+| `AI_TIMEOUT_MS` | No | Maximum wait for a Gemini response before using local fallback; defaults to `10000`. |
+| `RATE_LIMIT_WINDOW_MS` | No | API rate-limit window in milliseconds; defaults to `60000`. |
+| `RATE_LIMIT_MAX_REQUESTS` | No | Requests allowed per IP per window on `/api`; defaults to `30`. |
 
 ## API quick reference
-- `GET /api/health`
-- `GET /api/lessons?level=L1`
-- `GET /api/lessons/:id`
-- `GET /api/vocabulary?category=animals&level=L1`
-- `GET /api/quizzes?level=L1&category=colors`
-- `POST /api/chat`
-- `POST /api/progress/attempt`
-- `GET /api/progress/:learnerId`
-- `POST /api/progress/reset` (requires reset token headers)
+
+All `/api` requests are rate-limited. Authenticated endpoints require `Authorization: Bearer <token>`.
+
+| Method and path | Authentication | Purpose |
+| --- | --- | --- |
+| `GET /api/health` | No | Health status and whether Gemini is configured. |
+| `POST /api/auth/register` | No | Create a caregiver account and initial learner. Body: `{ "email": "...", "password": "at least 10 characters" }`. |
+| `POST /api/auth/login` | No | Sign in and receive a bearer token and learner ID. |
+| `GET /api/auth/me` | Bearer token | Return caregiver email and linked learner profiles. |
+| `POST /api/auth/logout` | No | Client-side logout acknowledgement; discard the token in the browser. |
+| `GET /api/lessons?level=L1` | No | List lessons for L1, L2, or L3. |
+| `GET /api/lessons/:id` | No | Return one lesson. |
+| `GET /api/vocabulary?category=animals&level=L1` | No | Filter curated vocabulary. |
+| `GET /api/quizzes?level=L1&category=colors` | No | Return quiz questions without answer keys. |
+| `POST /api/chat` | Bearer token | Send a learner message and receive Buddy's response. |
+| `GET /api/progress/:learnerId` | Bearer token | Read progress for a learner linked to the caregiver. |
+| `POST /api/progress/attempt` | Bearer token | Submit a quiz answer. Body: `{ "learnerId": "...", "quizId": "...", "selectedItemId": "...", "sessionId": "..." }`. |
+| `POST /api/progress/practice` | Bearer token | Record a uniquely practiced word; may automatically advance a completed level. Body: `{ "learnerId": "...", "itemId": "..." }`. |
+| `POST /api/progress/listen` | Bearer token | Record a word listen as a lesson played. Body: `{ "learnerId": "...", "itemId": "..." }`. |
+| `POST /api/progress/level` | Bearer token | Manually select `L1`, `L2`, or `L3`. Body: `{ "learnerId": "...", "level": "L1" }`. |
+| `POST /api/progress/reset` | Bearer token | Reset one linked learner's progress. Supply the learner ID in `x-learner-id`. |
 
 Example chat body:
+
 ```json
-{"learnerId":"11111111-1111-4111-8111-111111111111","message":"Teach me a word","context":{"level":"L1"}}
+{
+  "learnerId": "11111111-1111-4111-8111-111111111111",
+  "message": "Teach me a word",
+  "context": {
+    "level": "L1",
+    "history": [
+      { "role": "child", "text": "I like animals." },
+      { "role": "buddy", "text": "Animals are fun!" }
+    ]
+  }
+}
 ```
 
+The API verifies that an authenticated caregiver owns the learner ID for chat and progress operations. Request validation bounds message size and the amount of client-supplied conversation context. The server builds additional learner context from saved progress; client-submitted mastery values are not used.
+
 ## Tests and benchmark
-```bash
+
+```powershell
 npm test
 npm run benchmark
 ```
-The benchmark measures health endpoint round-trip latency, not Gemini response latency. For production evaluation, benchmark `/api/chat` with and without Gemini, record sample size, deployment environment, P50/P95/max, success and fallback rates. Do not claim a two-second guarantee based on the health check.
 
-## Deployment (Render dashboard)
-This project can be deployed manually without a `render.yaml` file:
-1. Push the project to a GitHub repository.
-2. In the Render Dashboard, create a **New → Web Service**, connect the repository, and select the repository root as the root directory.
+The benchmark measures health endpoint round-trip latency, not Gemini response latency. For production evaluation, benchmark `/api/chat` with and without Gemini and record sample size, deployment environment, P50/P95/max, success rate, and fallback rate. Do not claim a two-second guarantee based on the health check.
+
+## Deployment on Render
+
+The frontend and API are served by the same Express service. Deploy manually without a `render.yaml` file:
+
+1. Push the project to GitHub.
+2. In the Render Dashboard, create a **New → Web Service**, connect the repository, and use the repository root as the root directory.
 3. Choose the Node runtime. Set the build command to `npm install` and the start command to `npm start`.
 4. Set the health check path to `/api/health`.
-5. Add `NODE_ENV=production` and a long, random `AUTH_SECRET` under the service's environment variables. Optionally set `GEMINI_API_KEY` to enable Gemini. Render provides `PORT`; `DATABASE_PATH` is optional and defaults to `./data/littlelingo.sqlite`.
-6. Choose a plan, create the service, and deploy. Open the service URL for the frontend and `/api/health` to check the API.
+5. Set `NODE_ENV=production` and a long, random `AUTH_SECRET` in the service environment. Optionally set `GEMINI_API_KEY` and `GEMINI_MODEL`. Render supplies `PORT`; `DATABASE_PATH` is optional.
+6. Choose a plan and deploy. The service URL serves the web app; `/api/health` checks the API.
 
-On a free service, the filesystem is ephemeral, so the SQLite database and saved learner progress can be lost after restarts or redeploys. For persistent progress, use a hosting plan that supports a persistent disk mounted at `/var/data` and set `DATABASE_PATH=/var/data/littlelingo.sqlite`, or use a durable managed database. Do not scale multiple instances against separate local SQLite files.
+SQLite defaults to `./data/littlelingo.sqlite`, relative to the service's working directory. A free service's filesystem is ephemeral, so database contents and learner progress may be lost on restart or redeploy. To retain progress, use a hosting option with a persistent disk mounted at `/var/data` and set `DATABASE_PATH=/var/data/littlelingo.sqlite`, or use a durable managed database. Do not run multiple service instances with separate local SQLite files. Persistent storage is not a substitute for backups.
 
-## Child safety and privacy
-This project is a starter implementation, not a safety-certified product. Safety keyword rules are limited and cannot guarantee detection. Review data flows, obtain appropriate caregiver consent, publish a privacy notice, establish deletion and retention policies, and obtain legal review for applicable child privacy laws before production use. If Gemini is enabled, child messages and bounded context may be sent to Google. Adult supervision is recommended. Browser speech behavior varies; recognition is not a validated pronunciation assessment.
+## Privacy, child safety, and voice
+
+This is a starter implementation, not a safety-certified or legally compliant product. Buddy's mode and safety detection is based on limited rules and cannot guarantee detection or appropriate handling. Responses are validated and unsafe keyword matches are redirected, but this is not comprehensive moderation. A caregiver should supervise use.
+
+Caregiver registration collects an email address; child profiles use generated IDs and do not require a child's real name. Chat messages are sent to Google when Gemini is enabled. The API accepts a bounded amount of recent conversation context, and saved learner progress is used to personalize replies. Inform caregivers before enabling Gemini, protect account and database data, and establish consent, deletion, and retention policies. Obtain legal review for child privacy requirements applicable to your deployment; do not claim compliance based on this implementation.
+
+The app does not intentionally save raw microphone recordings. Speech recognition is not supported in every browser and generally requires HTTPS (localhost is allowed in development). Recognition results should be checked before sending; it is not a validated pronunciation assessment. Text-to-speech support is separate and varies by browser and device.
 
 ## Project map
-- `public/`: HTML, CSS and browser JS.
-- `src/app.js`: API routes and middleware.
-- `src/services/`: Gemini, fallback, mode detection, safety and progression.
-- `src/data/`: curated JSON learning content.
-- `src/database/`: SQLite schema and connection.
-- `tests/`: automated unit tests.
+
+- `public/`: HTML, CSS, and browser JavaScript.
+- `src/app.js`: Express API routes, middleware, and static frontend delivery.
+- `src/services/`: authentication, Gemini, fallback, mode detection, safety, and progress logic.
+- `src/data/`: curated lessons, vocabulary, and quizzes.
+- `src/database/`: SQLite connection and schema.
+- `tests/`: automated tests.
 - `scripts/benchmark.js`: health route benchmark.
-- `docs/`: architecture, system design and presentation script.
+- `System-Diagram.jpeg`: system architecture diagram.
+- `System-Design-Documentation.md`: detailed architecture and design decisions.
 
 ## Known limitations
-- Anonymous IDs are convenient but not strong authentication.
-- Reset endpoint requires server-side caregiver token configuration; UI cannot reset server progress without it.
-- Some requested vocabulary categories and lesson formats are starter examples, not a complete curriculum.
-- Tests are representative unit tests, not a complete end-to-end suite.
-- No deployment, live Gemini call, latency target or legal compliance has been independently verified.
 
-
-## Caregiver login and saved progress
-
-The app now provides caregiver email/password registration and sign-in. Passwords are stored as salted scrypt hashes; the browser receives a signed, seven-day bearer token. A random learner profile is created for the caregiver, and quiz attempts, stars, mastery, and level progress are stored in SQLite. Progress and chat endpoints require authentication and verify that the learner belongs to the signed-in caregiver. No child real name is required. The token is held in `sessionStorage`, so caregivers may need to sign in again after closing the browser; progress remains in the database.
-
-Set `AUTH_SECRET` to a long, randomly generated secret in production. Never use the development fallback secret on a public deployment. On Render, set the `AUTH_SECRET` environment variable in the service dashboard. SQLite data needs a persistent disk or managed database if it must survive service restarts and redeploys.
-
-### Voice and microphone checks
-
-Voice support is feature-detected in the browser. Speech recognition is not supported in every browser and generally requires HTTPS (localhost is allowed during development). Tap the microphone, grant permission when prompted, and check the recognized text before sending. If permission is denied or recognition is unavailable, typing still works. Text-to-speech is separately detected and can be stopped with the stop button. The app does not save raw microphone recordings. Actual microphone functionality must be tested on the target phone/browser because browser support and device permissions cannot be verified from the source code alone.
-
-### Runtime verification caveat
-
-Run `npm install`, `npm test`, and `npm start` on a machine with network access and a supported Node.js version. This development environment could not complete `npm install` within the available runtime window, so end-to-end HTTP/database/browser and real microphone tests remain unverified here.
+- The seven-day signed bearer token is stored in browser `sessionStorage`; caregivers may need to sign in again after closing the browser. The logout endpoint does not revoke an already-issued token.
+- SQLite is suitable for a single service instance but is not configured for shared multi-instance storage.
+- Level completion is based on practicing every vocabulary item in the selected level; quiz mastery is tracked separately and does not determine automatic level advancement.
+- Browser speech varies by browser and device. Some curriculum content and tests are representative starter examples, not a complete curriculum or end-to-end test suite.
+- No live deployment, real Gemini request, latency target, or legal compliance has been independently verified.
