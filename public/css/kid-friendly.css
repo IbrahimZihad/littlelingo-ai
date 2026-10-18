@@ -177,7 +177,34 @@ button {
 }
 
 .word-card button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   margin: 4px 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  line-height: 1;
+  border-radius: 12px;
+}
+
+.word-card .word-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.word-card .word-listen {
+  background: #edf1ff;
+  color: #4e57d9;
+}
+
+.word-card .word-practice {
+  background: linear-gradient(135deg, #ffd98b, #ffb84d);
+  color: #784d06;
+  box-shadow: 0 8px 18px rgba(255, 184, 77, .28);
 }
 
 .category-tabs button {
