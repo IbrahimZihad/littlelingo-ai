@@ -7,6 +7,7 @@ A playful English-learning web app for children under seven. It includes Buddy c
 - L1/L2/L3 lesson structure and bundled vocabulary.
 - Text chat with local fallback and optional Gemini.
 - Word Explorer, quiz feedback, stars and progress tracking.
+- Word Explorer practice progress and caregiver-selectable beginner, intermediate, and expert levels.
 - Browser text-to-speech and speech recognition where supported.
 - Anonymous learner ID; no required registration or real name.
 - API validation, Helmet security headers, rate limiting and SQLite persistence.

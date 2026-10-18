@@ -21,3 +21,8 @@ CREATE TABLE IF NOT EXISTS activities (
   id INTEGER PRIMARY KEY AUTOINCREMENT, learner_id TEXT NOT NULL REFERENCES learners(id) ON DELETE CASCADE,
   activity_type TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS word_practices (
+  learner_id TEXT NOT NULL REFERENCES learners(id) ON DELETE CASCADE,
+  item_id TEXT NOT NULL,
+  PRIMARY KEY (learner_id, item_id)
+);
