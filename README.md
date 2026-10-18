@@ -11,7 +11,7 @@ LittleLingo AI is a responsive English-learning web app for young children. A si
 - Caregiver registration and sign-in. Passwords are stored as salted scrypt hashes; authenticated API access uses a signed bearer token that expires after seven days.
 - Login includes a forgot-password screen, but email delivery is not configured yet, so reset requests are disabled. Caregivers must contact the site administrator until a verified email provider is configured.
 - Buddy detects conversation, learning, engagement, celebration, emotional-support, and safety-redirect modes. It adapts to the learner's saved level and recent progress without turning every conversation into a lesson.
-- Optional Gemini-generated replies adapt to the child's latest message, recent conversation, detected mode, and saved learning history. Replies are validated and time-limited; Buddy switches to local responses if Gemini is missing or unavailable.
+- Optional Gemini-generated replies adapt to the child's latest message, recent conversation, detected mode, saved learning history, selected lesson, and current word. The server derives bounded curriculum context from trusted lesson data; quiz answer keys are never sent. Replies are validated and time-limited, with a visible status and local response if Gemini is missing or unavailable.
 - Browser text-to-speech and speech recognition where supported.
 - API input validation, Helmet security headers, rate limiting, and learner ownership checks.
 
@@ -75,6 +75,10 @@ Example chat body:
   "message": "Teach me a word",
   "context": {
     "level": "L1",
+    "currentTopic": "animals",
+    "currentActivity": "animal-names",
+    "lessonId": "animal-names",
+    "itemId": "cat",
     "history": [
       { "role": "child", "text": "I like animals." },
       { "role": "buddy", "text": "Animals are fun!" }
@@ -83,7 +87,7 @@ Example chat body:
 }
 ```
 
-The API verifies that an authenticated caregiver owns the learner ID for chat and progress operations. Request validation bounds message size and the amount of client-supplied conversation context. The server builds additional learner context from saved progress; client-submitted mastery values are not used.
+The API verifies that an authenticated caregiver owns the learner ID for chat and progress operations. Request validation bounds message size and the amount of client-supplied conversation context. Lesson and item IDs are resolved against the selected level on the server, which builds bounded context from trusted curriculum and saved progress; client-submitted curriculum content and mastery values are not used. Quiz answer keys are excluded. Chat responses include a safe `aiStatus` (`ready`, `not_configured`, `timeout`, `provider_error`, or `invalid_response`) so the interface can distinguish Gemini success from local fallback without exposing provider details.
 
 ## Tests and benchmark
 

@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { hashPassword, verifyPassword, issueToken, verifyToken, newId } from './services/auth.service.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { vocabulary, curriculumLessons as lessons, quizzes } from './data/curriculum.js';
+import { vocabulary, curriculumLessons as lessons, quizzes, getTutorCurriculumContext } from './data/curriculum.js';
 import { fallbackReply } from './services/fallback.service.js';
 import { askGemini } from './services/gemini.service.js';
 import { detectMode } from './services/mode-detection.service.js';
@@ -19,7 +19,7 @@ export function createApp(db) {
  const rateWindow=Number(process.env.RATE_LIMIT_WINDOW_MS||60000);
  app.use('/api',rateLimit({windowMs:rateWindow,limit:Number(process.env.RATE_LIMIT_MAX_REQUESTS||30),standardHeaders:true,legacyHeaders:false,skip:req=>['/progress/practice','/progress/listen'].includes(req.path)}));
  app.use(['/api/progress/practice','/api/progress/listen'],rateLimit({windowMs:rateWindow,limit:Number(process.env.LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS||240),standardHeaders:true,legacyHeaders:false}));
- app.get('/api/health',(req,res)=>res.json({status:'ok',aiConfigured:Boolean(process.env.GEMINI_API_KEY),timestamp:new Date().toISOString()}));
+ app.get('/api/health',(req,res)=>res.json({status:'ok',aiConfigured:Boolean(process.env.GEMINI_API_KEY?.trim()),timestamp:new Date().toISOString()}));
  const authHeader = req => (req.get('authorization') || '').replace(/^Bearer\s+/i,'');
  const requireAuth = (req,res,next) => { const user=verifyToken(authHeader(req)); if(!user)return res.status(401).json({error:'Please sign in as a caregiver.'}); req.caregiverId=user.caregiverId; next(); };
  const ownsLearner = (db, caregiverId, learnerId) => Boolean(db.prepare('SELECT 1 FROM learners WHERE id=? AND caregiver_id=?').get(learnerId,caregiverId));
@@ -31,20 +31,21 @@ export function createApp(db) {
  app.get('/api/lessons/:id',(req,res)=>{const lesson=lessons.find(l=>l.id===req.params.id); if(!lesson)return res.status(404).json({error:'Lesson not found'});res.json(lesson);});
  app.get('/api/vocabulary',(req,res)=>{let data=vocabulary;if(req.query.category)data=data.filter(v=>v.category===String(req.query.category).slice(0,30));if(req.query.level&&['L1','L2','L3'].includes(req.query.level))data=data.filter(v=>v.level===req.query.level);res.json(data);});
  app.get('/api/quizzes',(req,res)=>{let data=quizzes;if(req.query.level)data=data.filter(q=>q.level===req.query.level);if(req.query.category)data=data.filter(q=>q.category===req.query.category);res.json(data.map(({answer,...q})=>q));});
- const chatSchema=z.object({learnerId:z.string().regex(/^[a-f0-9-]{16,40}$/i),message:z.string().trim().min(1).max(500),context:z.object({level:z.enum(['L1','L2','L3']).optional(),currentTopic:z.string().max(40).optional(),currentActivity:z.string().max(40).optional(),history:z.array(z.object({role:z.enum(['child','buddy']),text:z.string().max(250)})).max(6).optional()}).optional()});
+ const chatSchema=z.object({learnerId:z.string().regex(/^[a-f0-9-]{16,40}$/i),message:z.string().trim().min(1).max(500),context:z.object({level:z.enum(['L1','L2','L3']).optional(),currentTopic:z.string().max(40).optional(),currentActivity:z.string().max(60).optional(),lessonId:z.string().max(60).optional(),itemId:z.string().max(60).optional(),history:z.array(z.object({role:z.enum(['child','buddy']),text:z.string().max(250)})).max(6).optional()}).optional()});
  app.post('/api/chat',requireAuth,async(req,res)=>{const started=Date.now();const parsed=chatSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Please send a short message and try again.'});const {learnerId,message,context={}}=parsed.data;
   if(!ownsLearner(db,req.caregiverId,learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});
   const learnerContext=getLearnerContext(db,learnerId);
   const detected=detectMode(message,context);
-  const responseContext={...learnerContext,detectedMode:detected.mode,mood:detected.mood,currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,recentTurns:(context.history||[]).slice(-4)};
-  let result,source='fallback';if(detected.mode==='SAFETY_REDIRECT'||isUnsafe(message)){result={mode:'SAFETY_REDIRECT',message:safetyReply(),suggestedActivity:null,learningFeedback:null};}else{
+  const curriculum=getTutorCurriculumContext({level:learnerContext.level||context.level||'L1',topic:context.currentTopic,lessonId:context.lessonId,itemId:context.itemId,message});
+  const responseContext={...learnerContext,detectedMode:detected.mode,mood:detected.mood,currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,curriculum,activeLesson:curriculum.activeLesson,activeWord:curriculum.activeWord,focusWords:curriculum.focusWords,recentTurns:(context.history||[]).slice(-4)};
+  let result,source='fallback',aiStatus='not_requested';if(detected.mode==='SAFETY_REDIRECT'||isUnsafe(message)){result={mode:'SAFETY_REDIRECT',message:safetyReply(),suggestedActivity:null,learningFeedback:null};}else{
    const mode=detected.mode;
    const quick=/^(hi|hello|hey|thanks|thank you)[!. ]*$/i.test(message);
-   if(!quick){result=await askGemini(message,responseContext);if(result)source='gemini';}
+   if(!quick){const aiResult=await askGemini(message,responseContext);result=aiResult.response;aiStatus=aiResult.status;if(result)source='gemini';}
    if(!result)result=fallbackReply(message,responseContext);
    if(mode==='SAFETY_REDIRECT'){result={mode,message:safetyReply(),suggestedActivity:null,learningFeedback:null};}
   }
-  res.json({...result,mode:detected.mode,mood:detected.mood,source,durationMs:Date.now()-started});
+  res.json({...result,mode:detected.mode,mood:detected.mood,source,aiStatus,durationMs:Date.now()-started});
  });
  const attemptSchema=z.object({learnerId:z.string().regex(/^[a-f0-9-]{16,40}$/i),quizId:z.string().min(1).max(50),selectedItemId:z.string().min(1).max(50),sessionId:z.string().regex(/^[a-f0-9-]{16,40}$/i)});
  app.post('/api/progress/attempt',requireAuth,(req,res)=>{const p=attemptSchema.safeParse(req.body);if(!p.success)return res.status(400).json({error:'Invalid learning attempt.'});const a=p.data;if(!ownsLearner(db,req.caregiverId,a.learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});const quiz=quizzes.find(q=>q.id===a.quizId);if(!quiz)return res.status(404).json({error:'Quiz not found.'});if(!quiz.options.some(o=>o.itemId===a.selectedItemId))return res.status(400).json({error:'Invalid quiz answer.'});const correct=a.selectedItemId===quiz.answer;const itemId=correct?quiz.answer:a.selectedItemId;const transaction=db.transaction(()=>{db.prepare('INSERT OR IGNORE INTO learners(id) VALUES(?)').run(a.learnerId);db.prepare('INSERT INTO attempts(learner_id,item_id,skill,correct,session_id) VALUES(?,?,?,?,?)').run(a.learnerId,itemId,quiz.category,correct?1:0,a.sessionId);db.prepare('UPDATE learners SET stars=stars+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(correct?1:0,a.learnerId);});transaction();res.json({ok:true,correct,correctItemId:quiz.answer,mastery:masteryFor(db,a.learnerId,quiz.answer),progress:getProgress(db,a.learnerId)});});

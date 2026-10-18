@@ -165,3 +165,51 @@ export const quizzes = [
   quizQuestion('l3-fill-rabbit', 'L3', 'fill-blanks', 'The rabbit ___ to its home.', 'fill-hops', [['hops', '🐰', 'fill-hops'], ['swims', '🐟', 'fill-swim'], ['shines', '☀️', 'fill-bright']]),
   quizQuestion('l3-sentence-order', 'L3', 'sentence-builder', 'Which sentence has the words in the right order?', 'sentence-builder-right', [['The little bird can fly.', '🐦', 'sentence-builder-right'], ['Bird little the fly can.', '🧩', 'sentence-builder-wrong'], ['Fly can bird the little.', '🔤', 'sentence-builder-reversed']])
 ];
+
+export function getTutorCurriculumContext({ level, topic, lessonId, itemId, message }) {
+  const activeLevel = ['L1', 'L2', 'L3'].includes(level) ? level : 'L1';
+  const activeLesson = curriculumLessons.find(lesson => lesson.id === lessonId && lesson.level === activeLevel);
+  const activeItem = vocabulary.find(item => item.id === itemId && item.level === activeLevel);
+  const category = activeLesson?.category || (typeof topic === 'string' ? topic : '');
+  const normalizedMessage = String(message || '').toLowerCase();
+  const topicTokens = normalizedMessage.match(/[a-z0-9]+/g) || [];
+  const stopWords = new Set(['about', 'after', 'again', 'because', 'before', 'could', 'does', 'every', 'from', 'have', 'help', 'into', 'just', 'little', 'please', 'really', 'should', 'something', 'tell', 'that', 'them', 'there', 'these', 'they', 'this', 'what', 'when', 'where', 'which', 'with', 'would', 'your']);
+  const keywords = new Set(topicTokens.filter(token => token.length > 2 && !stopWords.has(token)));
+  const levelItems = vocabulary.filter(item => item.level === activeLevel);
+  const matchedItems = levelItems.filter(item => {
+    const searchable = `${item.word} ${item.sentence} ${item.category}`.toLowerCase();
+    return [...keywords].some(keyword => searchable.includes(keyword));
+  });
+  const topicItems = category
+    ? levelItems.filter(item => item.category === category)
+    : [];
+  const focusItems = [...new Map([
+    ...(activeItem ? [activeItem] : []),
+    ...matchedItems,
+    ...topicItems
+  ].map(item => [item.id, item])).values()].slice(0, activeLesson?.category === 'alphabet' ? 26 : 12);
+  const lessons = curriculumLessons
+    .filter(lesson => lesson.level === activeLevel)
+    .map(({ id, title, category: lessonCategory, description }) => ({ id, title, category: lessonCategory, description }));
+
+  return {
+    level: activeLevel,
+    lessons,
+    activeLesson: activeLesson ? {
+      title: activeLesson.title,
+      category: activeLesson.category,
+      description: activeLesson.description,
+      challenge: activeLesson.challenge?.prompt || null
+    } : null,
+    activeWord: activeItem ? {
+      word: activeItem.word,
+      category: activeItem.category,
+      example: activeItem.sentence
+    } : null,
+    focusWords: focusItems.map(({ word, category: itemCategory, sentence }) => ({
+      word,
+      category: itemCategory,
+      example: sentence
+    }))
+  };
+}

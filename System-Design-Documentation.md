@@ -17,6 +17,7 @@ The application is a single-service deployment: a Node.js/Express process serves
 - Track unique word practices, quiz attempts, stars, lessons played, and mastery.
 - Let Buddy choose among conversation, learning, engagement, emotional-support, celebration, and safety-redirect modes.
 - Personalize Buddy using the learner's saved level and progress, the current activity/topic, and bounded recent conversation turns.
+- Resolve optional selected lesson and word IDs against the learner's current level, then give Buddy only relevant trusted curriculum materials; never include quiz answer keys.
 - Work without a Gemini key and fall back locally when Gemini is unavailable or returns an invalid response.
 - Provide browser text-to-speech and speech recognition when available.
 
@@ -41,12 +42,12 @@ See [System-Diagram.jpeg](./System-Diagram.jpeg) for the component and data-flow
 
 - `public/`: responsive browser interface and speech feature detection.
 - `src/server.js`: loads environment variables, opens SQLite, starts Express, and uses the hosting-provided `PORT` or port `5000`.
-- `src/app.js`: middleware, caregiver authentication routes, content/chat/progress APIs, and static frontend delivery.
+- `src/app.js`: middleware, caregiver authentication routes, content/chat/progress APIs, server-side tutor curriculum-context resolution, and static frontend delivery.
 - `src/services/auth.service.js`: salted scrypt password hashes and signed, seven-day bearer tokens.
 - `src/services/mode-detection.service.js`: rule-based mode and mood cues.
 - `src/services/learning-engine.service.js`: learner progress, quiz mastery, and saved chat context.
-- `src/services/gemini.service.js`: optional Gemini request, response validation, timeout, and failure fallback signaling.
-- `src/services/fallback.service.js`: mode-aware local replies.
+- `src/services/gemini.service.js`: optional Gemini request with constrained JSON output, response validation, timeout, safe status, and failure fallback signaling.
+- `src/services/fallback.service.js`: mode-aware local replies with selected-lesson and curriculum-word responses.
 - `src/services/safety.service.js`: bounded text/output checks and basic safety keyword guardrails.
 - `src/database/`: SQLite connection and schema.
 - `src/data/curriculum.js`: level-specific teaching materials, generated alphabet/number cards, lesson challenges, and quiz answer keys. `src/data/vocabulary.json` supplies the base vocabulary.
@@ -107,7 +108,9 @@ Example request:
   "context": {
     "level": "L1",
     "currentTopic": "animals",
-    "currentActivity": "word-explorer",
+    "currentActivity": "animal-names",
+    "lessonId": "animal-names",
+    "itemId": "cat",
     "history": [
       { "role": "child", "text": "I like animals." },
       { "role": "buddy", "text": "Animals are fun!" }
@@ -116,7 +119,7 @@ Example request:
 }
 ```
 
-The chat schema limits a message to 500 characters, history to six supplied entries, and each history text to 250 characters. The service uses at most the last four turns. Saved learner history is derived server-side from level, practiced vocabulary, lesson plays, quiz accuracy, and recent quiz attempts. Client-supplied mastery values are not accepted. Chat transcripts themselves are not stored in SQLite by the current API.
+The chat schema limits a message to 500 characters, history to six supplied entries, and each history text to 250 characters. The service uses at most the last four turns. Saved learner history is derived server-side from level, practiced vocabulary, lesson plays, quiz accuracy, and recent quiz attempts. Lesson and item IDs are resolved against bundled curriculum at the learner's level; arbitrary client-supplied lesson text and mastery values are not trusted. The Gemini prompt receives a bounded set of matching lesson summaries and word examples, never quiz answer keys. The response's safe `aiStatus` is `ready`, `not_configured`, `timeout`, `provider_error`, `invalid_response`, or `not_requested`; it does not expose provider error text or credentials. Chat transcripts themselves are not stored in SQLite by the current API.
 
 ## 7. Learning progress and level changes
 
