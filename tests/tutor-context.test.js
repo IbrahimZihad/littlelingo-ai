@@ -56,3 +56,33 @@ test('local fallback answers broad conversation prompts with a concrete child-fr
   assert.match(response.message, /seed/i);
   assert.doesNotMatch(response.message, /That sounds interesting/);
 });
+
+test('local fallback answers a requested curriculum topic instead of switching subjects', () => {
+  const response = fallbackReply('Tell me about numbers.', {
+    level: 'L1',
+    curriculum: getTutorCurriculumContext({
+      level: 'L1',
+      topic: 'all',
+      message: 'Tell me about numbers.'
+    })
+  });
+
+  assert.match(response.message, /numbers help us count/i);
+  assert.match(response.message, /one to ten/i);
+  assert.doesNotMatch(response.message, /seed/i);
+});
+
+test('local fallback connects a short topic follow-up to the previous child request', () => {
+  const response = fallbackReply('numbers', {
+    level: 'L2',
+    recentTurns: [
+      { role: 'child', text: 'Tell me about numbers.' },
+      { role: 'buddy', text: 'Did you know a seed can grow?' },
+      { role: 'child', text: 'numbers' }
+    ]
+  });
+
+  assert.match(response.message, /numbers help us count/i);
+  assert.match(response.message, /one to one hundred/i);
+  assert.doesNotMatch(response.message, /That sounds interesting/);
+});

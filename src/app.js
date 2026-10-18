@@ -36,8 +36,10 @@ export function createApp(db) {
   if(!ownsLearner(db,req.caregiverId,learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});
   const learnerContext=getLearnerContext(db,learnerId);
   const detected=detectMode(message,context);
+  const chatHistory=(context.history||[]).slice(-6);
   const curriculum=getTutorCurriculumContext({level:learnerContext.level||context.level||'L1',topic:context.currentTopic,lessonId:context.lessonId,itemId:context.itemId,message});
-  const responseContext={...learnerContext,detectedMode:detected.mode,mood:detected.mood,currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,curriculum,activeLesson:curriculum.activeLesson,activeWord:curriculum.activeWord,focusWords:curriculum.focusWords,recentTurns:(context.history||[]).slice(-4)};
+  const responseContext={...learnerContext,detectedMode:detected.mode,mood:detected.mood,currentTopic:curriculum.topic,currentActivity:context.currentActivity||null,curriculum,activeLesson:curriculum.activeLesson,activeWord:curriculum.activeWord,focusWords:curriculum.focusWords,recentTurns:chatHistory.slice(-4)};
+  if(!curriculum.topic&&message.trim().split(/\s+/).length<=4){const previousTopic=chatHistory.slice(0,-1).reverse().find(turn=>turn.role==='child'&&/\b(tell me about|what about|more about|learn about|teach me about)\b/i.test(turn.text));if(previousTopic){const previousCurriculum=getTutorCurriculumContext({level:learnerContext.level||context.level||'L1',message:previousTopic.text});if(previousCurriculum.topic){responseContext.curriculum=previousCurriculum;responseContext.currentTopic=previousCurriculum.topic;responseContext.focusWords=previousCurriculum.focusWords;}}}
   let result,source='fallback',aiStatus='not_requested';if(detected.mode==='SAFETY_REDIRECT'||isUnsafe(message)){result={mode:'SAFETY_REDIRECT',message:safetyReply(),suggestedActivity:null,learningFeedback:null};}else{
    const mode=detected.mode;
    const quick=/^(hi|hello|hey|thanks|thank you)[!. ]*$/i.test(message);

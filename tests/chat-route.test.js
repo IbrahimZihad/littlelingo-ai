@@ -47,6 +47,32 @@ test('chat route returns curriculum-aware fallback and safe AI status when Gemin
     assert.equal(result.aiStatus, 'not_configured');
     assert.match(result.message, /Cat/);
     assert.match(result.message, /cat/i);
+
+    const followUp = await fetch(`http://127.0.0.1:${server.address().port}/api/chat`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${issueToken(caregiverId)}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        learnerId,
+        message: 'numbers',
+        context: {
+          level: 'L1',
+          currentTopic: 'all',
+          history: [
+            { role: 'child', text: 'Tell me about numbers.' },
+            { role: 'buddy', text: 'Did you know a seed can grow?' },
+            { role: 'child', text: 'numbers' }
+          ]
+        }
+      })
+    });
+
+    assert.equal(followUp.status, 200);
+    const followUpResult = await followUp.json();
+    assert.match(followUpResult.message, /numbers help us count/i);
+    assert.doesNotMatch(followUpResult.message, /seed/i);
   } finally {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     db.close();

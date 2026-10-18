@@ -166,12 +166,28 @@ export const quizzes = [
   quizQuestion('l3-sentence-order', 'L3', 'sentence-builder', 'Which sentence has the words in the right order?', 'sentence-builder-right', [['The little bird can fly.', '🐦', 'sentence-builder-right'], ['Bird little the fly can.', '🧩', 'sentence-builder-wrong'], ['Fly can bird the little.', '🔤', 'sentence-builder-reversed']])
 ];
 
+function curriculumTopic(text) {
+  const topicAliases = [
+    ['numbers', /\b(numbers?|count(?:ing)?)\b/i],
+    ['alphabet', /\b(alphabet|letters?|sounds?)\b/i],
+    ['colors', /\b(colou?rs?)\b/i],
+    ['animals', /\b(animals?|pets?)\b/i],
+    ['fruits', /\b(fruits?)\b/i],
+    ['word-building', /\b(word building|blend(?:ing)?|sounds make words)\b/i],
+    ['sentences', /\b(sentences?|sentence building)\b/i],
+    ['reading', /\b(stories|story|reading|read)\b/i],
+    ['fill-blanks', /\b(fill in the blanks?|fill the blanks?)\b/i]
+  ];
+  return topicAliases.find(([, pattern]) => pattern.test(text))?.[0] || null;
+}
+
 export function getTutorCurriculumContext({ level, topic, lessonId, itemId, message }) {
   const activeLevel = ['L1', 'L2', 'L3'].includes(level) ? level : 'L1';
   const activeLesson = curriculumLessons.find(lesson => lesson.id === lessonId && lesson.level === activeLevel);
   const activeItem = vocabulary.find(item => item.id === itemId && item.level === activeLevel);
-  const category = activeLesson?.category || (typeof topic === 'string' ? topic : '');
   const normalizedMessage = String(message || '').toLowerCase();
+  const suppliedTopic = typeof topic === 'string' && topic !== 'all' ? topic : null;
+  const category = activeLesson?.category || curriculumTopic(normalizedMessage) || suppliedTopic || '';
   const topicTokens = normalizedMessage.match(/[a-z0-9]+/g) || [];
   const stopWords = new Set(['about', 'after', 'again', 'because', 'before', 'could', 'does', 'every', 'from', 'have', 'help', 'into', 'just', 'little', 'please', 'really', 'should', 'something', 'tell', 'that', 'them', 'there', 'these', 'they', 'this', 'what', 'when', 'where', 'which', 'with', 'would', 'your']);
   const keywords = new Set(topicTokens.filter(token => token.length > 2 && !stopWords.has(token)));
@@ -194,6 +210,7 @@ export function getTutorCurriculumContext({ level, topic, lessonId, itemId, mess
 
   return {
     level: activeLevel,
+    topic: category || null,
     lessons,
     activeLesson: activeLesson ? {
       title: activeLesson.title,

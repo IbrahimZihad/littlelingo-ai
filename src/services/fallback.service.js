@@ -8,6 +8,65 @@ function findMentionedWord(message, level) {
     && new RegExp(`(^|[^a-z0-9])${item.word.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`).test(text));
 }
 
+function topicFromMessage(message) {
+  const text = String(message || '').trim().toLowerCase();
+  const topics = [
+    ['numbers', /\b(numbers?|count(?:ing)?)\b/i],
+    ['alphabet', /\b(alphabet|letters?|sounds?)\b/i],
+    ['colors', /\b(colou?rs?)\b/i],
+    ['animals', /\b(animals?|pets?)\b/i],
+    ['fruits', /\b(fruits?)\b/i],
+    ['word-building', /\b(word building|blend(?:ing)?|sounds make words)\b/i],
+    ['sentences', /\b(sentences?|sentence building)\b/i],
+    ['reading', /\b(stories|story|reading|read)\b/i],
+    ['fill-blanks', /\b(fill in the blanks?|fill the blanks?)\b/i]
+  ];
+  return topics.find(([, pattern]) => pattern.test(text))?.[0] || null;
+}
+
+function requestedTopic(message, context) {
+  const currentTopic = topicFromMessage(message);
+  if (currentTopic) return currentTopic;
+
+  const shortFollowUp = String(message || '').trim().split(/\s+/).length <= 4;
+  if (!shortFollowUp) return null;
+
+  for (const turn of [...(context.recentTurns || [])].reverse()) {
+    if (turn.role !== 'child') continue;
+    const previousTopic = topicFromMessage(turn.text);
+    if (previousTopic && /\b(tell me about|what about|more about|learn about|teach me about)\b/i.test(turn.text)) {
+      return previousTopic;
+    }
+  }
+  return null;
+}
+
+function topicReply(topic, context) {
+  const level = context.level || 'L1';
+  if (topic === 'numbers') {
+    const range = level === 'L1' ? 'one to ten' : level === 'L2' ? 'one to one hundred' : 'numbers in stories';
+    return `Numbers help us count! 🌟 In your level, we explore ${range}. Let's count together: one, two, three!`;
+  }
+  if (topic === 'alphabet') {
+    const letters = (context.curriculum?.focusWords || [])
+      .filter(item => item.category === 'alphabet')
+      .slice(0, 3)
+      .map(item => item.word.split(' ')[0])
+      .join(', ');
+    return `Letters help us read and spell words! ${letters ? `Let's try ${letters}.` : 'Which letter would you like to explore?'}`;
+  }
+
+  const words = (context.curriculum?.focusWords || [])
+    .filter(item => item.category === topic)
+    .slice(0, 3);
+  const lesson = (context.curriculum?.lessons || []).find(item => item.category === topic);
+  if (words.length) {
+    return `Let's explore ${lesson?.title || topic.replace('-', ' ')}! ${words.map(item => `${item.word}: ${item.example}`).join(' ')} Which one do you like?`;
+  }
+  if (lesson) return `${lesson.title} is about ${lesson.description.toLowerCase()} What would you like to try?`;
+  return null;
+}
+
 function learningReply(message, context, text) {
   if (/\b(practice|say it|use it in a simple sentence)\b/.test(text)) {
     const match = String(message || '').match(/(?:practice (?:the )?word|practice)\s+([a-z]+)\b/i);
@@ -91,10 +150,14 @@ export function fallbackReply(message, context = {}) {
   } else if (context.activeWord) {
     reply = `You are looking at ${context.activeWord.word}. ${context.activeWord.example} What do you notice about it?`;
   } else {
-    const mentionedWord = findMentionedWord(message, context.level || 'L1');
-    reply = mentionedWord
-      ? `${mentionedWord.word}: ${mentionedWord.sentence} What do you think about it?`
-      : null;
+    const topic = requestedTopic(message, context);
+    reply = topic ? topicReply(topic, context) : null;
+    if (!reply) {
+      const mentionedWord = findMentionedWord(message, context.level || 'L1');
+      reply = mentionedWord
+        ? `${mentionedWord.word}: ${mentionedWord.sentence} What do you think about it?`
+        : null;
+    }
   }
   if (!reply && /\b(anything|something|fun fact|tell me about)\b/.test(text)) {
     reply = "Did you know a tiny seed can grow into a plant with water and sunshine? 🌱 What would you like to discover next?";
