@@ -1,4 +1,4 @@
-import vocabulary from '../data/vocabulary.json' with { type: 'json' };
+import { vocabulary } from '../data/curriculum.js';
 import { detectMode } from './mode-detection.service.js';
 import { safetyReply } from './safety.service.js';
 export function fallbackReply(message, context={}) {
@@ -35,7 +35,7 @@ export function fallbackReply(message, context={}) {
    reply=`Great job! 🌟 The word is “${word}.” Say it with me: ${word}. Now try this sentence: “${sentence}” Can you say it?`;
   } else reply='Let’s practice together! Say the word slowly, then use it in a short sentence. What word shall we try?';
  }
- else if(mode==='LEARNING') { const level=context.level||'L1';const levelWords=vocabulary.filter(item=>level==='L3'||item.level===level);const practiced=new Set(context.learningHistory?.recentWords||[]);const freshWords=levelWords.filter(item=>!practiced.has(item.word));const choices=freshWords.length?freshWords:levelWords;const item=choices[Math.floor(Math.random()*choices.length)]||vocabulary[0];reply=`Let's learn a word! ${item.emoji} ${item.word}. ${item.sentence} Can you say ${item.word}?`; }
+ else if(mode==='LEARNING') { const level=context.level||'L1';const levelWords=vocabulary.filter(item=>item.level===level);const practiced=new Set(context.learningHistory?.recentWords||[]);const freshWords=levelWords.filter(item=>!practiced.has(item.word));const choices=freshWords.length?freshWords:levelWords;const item=choices[Math.floor(Math.random()*choices.length)]||vocabulary[0];reply=`Let's learn a word! ${item.emoji} ${item.word}. ${item.sentence} Can you say ${item.word}?`; }
  else if(/\b(hello|hi|hey)\b/.test(m)) reply="Hello! 😊 What would you like to talk about today?";
  else if(/\b(thank you|thanks)\b/.test(m)) reply="You're welcome! 🌟 I enjoyed chatting with you.";
  else if(/\b(my name|your name)\b/.test(m)) reply="You can call me Buddy! What would you like to talk about?";

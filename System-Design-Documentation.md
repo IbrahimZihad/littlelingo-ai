@@ -11,6 +11,8 @@ The application is a single-service deployment: a Node.js/Express process serves
 ### Functional
 - Register and sign in caregivers; associate generated learner profiles with caregiver accounts.
 - Provide L1 Beginner, L2 Intermediate, and L3 Expert learning content.
+- Teach the level-specific sequence: alphabet, early numbers and familiar words in L1; word blending, short sentences, and numbers 1–100 in L2; short-story reading, sentence building, and fill-in-the-blank work in L3.
+- Provide one aligned 10-question quiz for each level.
 - Allow caregivers to select a learner's level manually and advance automatically after every vocabulary word in a level has been practiced.
 - Track unique word practices, quiz attempts, stars, lessons played, and mastery.
 - Let Buddy choose among conversation, learning, engagement, emotional-support, celebration, and safety-redirect modes.
@@ -30,8 +32,8 @@ The application is a single-service deployment: a Node.js/Express process serves
 See [System-Diagram.jpeg](./System-Diagram.jpeg) for the component and data-flow diagram.
 
 1. The child or caregiver uses the browser app. HTML, CSS, and JavaScript are served from `public/`; optional speech features use browser APIs.
-2. Express serves static files and the REST API from the same origin. Helmet applies response security headers, `/api` requests are rate-limited, request bodies are size-limited, and Zod schemas validate route inputs.
-3. The API exposes separate content, chat, authentication, and progress routes. Curated lessons, vocabulary, and quizzes are loaded from JSON files in `src/data/`.
+2. Express serves static files and the REST API from the same origin. Helmet applies response security headers, API requests are rate-limited, request bodies are size-limited, and Zod schemas validate route inputs. Word practice and listening have a separate higher rate limit to support the 100-number Level 2 curriculum.
+3. The API exposes separate content, chat, authentication, and progress routes. `src/data/curriculum.js` combines the base word list with level-specific cards, generated number names, lesson challenges, and three server-checked quiz sets.
 4. Chat verifies caregiver ownership, reads saved learner context through the learning engine, detects the child's current mode and mood, and calls Gemini when appropriate. Gemini output is validated; otherwise the local fallback generates a response. The reply returns through the chat route, not through the progress API.
 5. Progress routes validate ownership and update SQLite. The chat service reads the saved learner summary directly from the database-backed learning engine; it does not route messages through progress mutation logic.
 
@@ -47,7 +49,7 @@ See [System-Diagram.jpeg](./System-Diagram.jpeg) for the component and data-flow
 - `src/services/fallback.service.js`: mode-aware local replies.
 - `src/services/safety.service.js`: bounded text/output checks and basic safety keyword guardrails.
 - `src/database/`: SQLite connection and schema.
-- `src/data/`: curated lesson, vocabulary, and quiz JSON.
+- `src/data/curriculum.js`: level-specific teaching materials, generated alphabet/number cards, lesson challenges, and quiz answer keys. `src/data/vocabulary.json` supplies the base vocabulary.
 
 ## 4. Storage model
 
@@ -69,6 +71,8 @@ Registration accepts an email and a password between 10 and 128 characters, hash
 
 Set `AUTH_SECRET` to a long, random value in production. The development fallback secret must not be used on a public deployment. Protected routes require an `Authorization: Bearer <token>` header. Chat and progress routes additionally verify that the requested learner belongs to the authenticated caregiver. Content routes and health are public.
 
+The login page includes a forgot-password screen, but password reset is intentionally disabled until a verified email-delivery provider and a single-use, expiring reset-token flow are configured. The interface does not reveal or display reset tokens; caregivers are told to contact the site administrator in the meantime.
+
 All `/api` routes are rate-limited. The default is 30 requests per 60 seconds per IP and can be changed using `RATE_LIMIT_MAX_REQUESTS` and `RATE_LIMIT_WINDOW_MS`. JSON request bodies are limited to 12 KB. Validation errors return client errors rather than accepting malformed data.
 
 ## 6. API contracts
@@ -80,10 +84,10 @@ All `/api` routes are rate-limited. The default is 30 requests per 60 seconds pe
 | `POST /api/auth/login` | Public | Verifies credentials and returns a bearer token, learner ID, and expiry. |
 | `GET /api/auth/me` | Bearer token | Returns caregiver email and linked learner profiles. |
 | `POST /api/auth/logout` | Public | Returns an acknowledgement; browser code discards its token. |
-| `GET /api/lessons?level=L1` | Public | Returns curated lessons for a valid level; defaults to L1. |
+| `GET /api/lessons?level=L1` | Public | Returns level-specific lessons and child-facing practice challenges; defaults to L1. |
 | `GET /api/lessons/:id` | Public | Returns one lesson or `404`. |
 | `GET /api/vocabulary?category=animals&level=L1` | Public | Returns curated words filtered by optional category and level. |
-| `GET /api/quizzes?level=L1&category=colors` | Public | Returns quiz data without correct-answer keys. |
+| `GET /api/quizzes?level=L1&category=colors` | Public | Returns 10 level-aligned questions without correct-answer keys. Each of the three levels has one 10-question set. |
 | `POST /api/chat` | Bearer token | Accepts `{learnerId, message, context?}` and returns Buddy's mode, mood, message, activity/feedback fields, response source, and duration. |
 | `GET /api/progress/:learnerId` | Bearer token | Returns level, stars, quiz counts/accuracy/mastery, practiced word totals, and level progress. |
 | `POST /api/progress/attempt` | Bearer token | Accepts `{learnerId, quizId, selectedItemId, sessionId}`. The server checks the answer against the bundled quiz and updates attempts/stars. |
@@ -122,6 +126,12 @@ Each learner/item pair is stored once in `word_practices`. Progress is the share
 
 Practices remain recorded when the level changes, and the next level's progress is calculated against its own vocabulary set. Quiz mastery and quiz correctness are tracked separately; they do not gate the word-practice-based level advance.
 
+### Curriculum and quiz sets
+
+L1 contains A–Z letter cards, numbers 1–10, and familiar color, animal, and fruit words. L2 contains sound-blending words, short-sentence examples, and an independently tracked number sequence from 1–100. L3 presents short reading passages, sentence-order practice, and fill-in-the-blank activities. The Lessons screen filters activities to the learner's selected level; long word lists are shown in pages of 20.
+
+There are 10 quiz questions for each level (30 total). Reading questions include the short passage needed to answer them. Correct answers remain in the server curriculum module and are stripped from the public quiz response; the answer endpoint checks selections against that server-side key. Word practice/listen actions have a separate higher rate limit than other API calls so the number curriculum can be explored without weakening limits for chat and authentication.
+
 ### Quiz progress
 
 Each quiz submission is checked against the server's bundled quiz answer. A correct answer earns one star. An item is counted as mastered after at least three correct attempts across at least two distinct session IDs. Overall quiz accuracy is based on submitted attempts. These metrics support dashboard feedback and learner context but do not control automatic level advancement.
@@ -142,7 +152,7 @@ The child mode and mood outputs are heuristic signals, not reliable mental-state
 
 Gemini is optional. The service reads `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-2.5-flash`), and `AI_TIMEOUT_MS` (default `10000`) from the server environment. The key must never be sent to browser code or committed to source control.
 
-For eligible chat turns, the service sends the child message and a bounded serialized context to Gemini and requests JSON. The response is parsed and validated against supported modes and output requirements. Missing credentials, a timeout, provider error, invalid JSON, or invalid response shape results in the local fallback. A timeout bounds how long the app waits before falling back; it does not establish a latency guarantee for the model provider.
+For eligible chat turns, the service sends the latest child message, up to four bounded recent conversation turns, and learner level, mode, mood, topic, activity, and saved learning history to Gemini and requests JSON. The prompt prioritizes the latest child message so the response addresses what the child just said. The response is parsed and validated against supported modes and output requirements. Missing credentials, client initialization failure, a timeout, provider error, invalid JSON, or invalid response shape results in the local fallback. A timeout bounds how long the app waits before falling back; it does not establish a latency guarantee for the model provider.
 
 When Gemini is enabled, child messages and bounded learning/conversation context are sent to Google. Caregivers should be informed before enabling it, and the deployed service must follow applicable provider terms, privacy commitments, and child-data requirements.
 

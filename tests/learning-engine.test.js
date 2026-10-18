@@ -8,8 +8,7 @@ import { createApp } from '../src/app.js';
 import { issueToken } from '../src/services/auth.service.js';
 import { getLearnerContext, getProgress } from '../src/services/learning-engine.service.js';
 import { fallbackReply } from '../src/services/fallback.service.js';
-
-const vocabulary = JSON.parse(fs.readFileSync(new URL('../src/data/vocabulary.json', import.meta.url), 'utf8'));
+import { vocabulary, quizzes, curriculumLessons } from '../src/data/curriculum.js';
 
 test('Word Explorer progress counts each practiced word once and follows the selected level', () => {
   const db = new Database(':memory:');
@@ -17,7 +16,7 @@ test('Word Explorer progress counts each practiced word once and follows the sel
   db.prepare('INSERT INTO learners(id, level) VALUES(?, ?)').run('learner-1', 'L1');
 
   const initial = getProgress(db, 'learner-1');
-  assert.equal(initial.totalWords, 18);
+  assert.equal(initial.totalWords, vocabulary.filter(word => word.level === 'L1').length);
   assert.equal(initial.practicedWords, 0);
   assert.equal(initial.progress, 0);
 
@@ -25,12 +24,12 @@ test('Word Explorer progress counts each practiced word once and follows the sel
   db.prepare('INSERT OR IGNORE INTO word_practices(learner_id, item_id) VALUES(?, ?)').run('learner-1', 'cat');
   const levelOne = getProgress(db, 'learner-1');
   assert.equal(levelOne.practicedWords, 1);
-  assert.equal(levelOne.progress, 6);
+  assert.equal(levelOne.progress, Math.round(100 / initial.totalWords));
 
   db.prepare('UPDATE learners SET level=? WHERE id=?').run('L2', 'learner-1');
   const levelTwo = getProgress(db, 'learner-1');
   assert.equal(levelTwo.level, 'L2');
-  assert.equal(levelTwo.totalWords, 6);
+  assert.equal(levelTwo.totalWords, vocabulary.filter(word => word.level === 'L2').length);
   assert.equal(levelTwo.practicedWords, 0);
   assert.equal(levelTwo.progress, 0);
   db.close();
@@ -95,11 +94,37 @@ test('Word Explorer practice and listening update caregiver dashboard counts', a
   db.prepare('INSERT INTO caregivers(id, email, password_hash) VALUES(?, ?, ?)').run(caregiverId, `${caregiverId}@example.test`, 'test');
   db.prepare('INSERT INTO learners(id, caregiver_id) VALUES(?, ?)').run(learnerId, caregiverId);
   const originalAuthSecret = process.env.AUTH_SECRET;
+  const originalRateLimit = process.env.RATE_LIMIT_MAX_REQUESTS;
+  const originalActivityRateLimit = process.env.LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS;
   process.env.AUTH_SECRET = 'learning-engine-test-secret';
+  process.env.RATE_LIMIT_MAX_REQUESTS = '30';
+  process.env.LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS = '500';
   const server = createApp(db).listen(0);
 
   try {
     await once(server, 'listening');
+    const publicApi = `http://127.0.0.1:${server.address().port}/api`;
+    assert.equal(vocabulary.filter(word => word.level === 'L1' && word.category === 'alphabet').length, 26);
+    assert.equal(vocabulary.filter(word => word.level === 'L1' && word.category === 'numbers').length, 10);
+    assert.equal(vocabulary.filter(word => word.level === 'L2' && word.category === 'numbers').length, 100);
+    assert.equal(new Set(vocabulary.map(word => word.id)).size, vocabulary.length);
+    for (const level of ['L1', 'L2', 'L3']) {
+      const levelQuizzes = quizzes.filter(quiz => quiz.level === level);
+      assert.equal(levelQuizzes.length, 10);
+      assert.ok(levelQuizzes.every(quiz => quiz.options.every(option => option.itemId)));
+    }
+    const vocabularyIds = new Set(vocabulary.map(word => word.id));
+    assert.ok(quizzes.every(quiz => quiz.options.every(option => vocabularyIds.has(option.itemId))));
+    assert.equal(curriculumLessons.filter(lesson => lesson.level === 'L3').length, 3);
+    const publicQuizResponse = await fetch(`${publicApi}/quizzes?level=L1`);
+    const publicQuizzes = await publicQuizResponse.json();
+    assert.equal(publicQuizResponse.status, 200);
+    assert.equal(publicQuizzes.length, 10);
+    assert.ok(publicQuizzes.every(quiz => !Object.hasOwn(quiz, 'answer')));
+    const levelThreeResponse = await fetch(`${publicApi}/vocabulary?level=L3`);
+    const levelThreeWords = await levelThreeResponse.json();
+    assert.ok(levelThreeWords.length > 0);
+    assert.ok(levelThreeWords.every(word => word.level === 'L3'));
     const url = `http://127.0.0.1:${server.address().port}/api/progress`;
     const headers = { authorization: `Bearer ${issueToken(caregiverId)}`, 'content-type': 'application/json' };
     const listenResponse = await fetch(`${url}/listen`, { method: 'POST', headers, body: JSON.stringify({ learnerId, itemId: 'cat' }) });
@@ -141,5 +166,9 @@ test('Word Explorer practice and listening update caregiver dashboard counts', a
     db.close();
     if (originalAuthSecret === undefined) delete process.env.AUTH_SECRET;
     else process.env.AUTH_SECRET = originalAuthSecret;
+    if (originalRateLimit === undefined) delete process.env.RATE_LIMIT_MAX_REQUESTS;
+    else process.env.RATE_LIMIT_MAX_REQUESTS = originalRateLimit;
+    if (originalActivityRateLimit === undefined) delete process.env.LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS;
+    else process.env.LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS = originalActivityRateLimit;
   }
 });

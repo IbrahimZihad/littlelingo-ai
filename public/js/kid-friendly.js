@@ -16,6 +16,7 @@ if (activityHeading) activityHeading.textContent = 'What sounds fun?';
 const activityCopy = [
   ['Talk to Buddy', 'Say hello or ask a question'],
   ['Find a word', 'Look, listen, and practice'],
+  ['Learn a lesson', 'Explore your level step by step'],
   ['Play a quiz', 'Pick a picture answer'],
   ['Name a feeling', 'All feelings are welcome']
 ];
@@ -100,4 +101,8 @@ const wordGrid = document.querySelector('#wordGrid');
 if (wordGrid) {
   wordGrid.setAttribute('aria-live', 'polite');
   wordGrid.setAttribute('aria-label', 'Words to explore');
+  const wordExplorerTools = document.createElement('div');
+  wordExplorerTools.className = 'word-explorer-tools';
+  wordExplorerTools.innerHTML = '<p class="word-count" id="wordCount" aria-live="polite">Let’s find a new word!</p><p class="word-tip"><span aria-hidden="true">✨</span> Tap Listen to hear a word, or Practice to play with Buddy.</p>';
+  wordGrid.before(wordExplorerTools);
 }

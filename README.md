@@ -4,11 +4,14 @@ LittleLingo AI is a responsive English-learning web app for young children. A si
 
 ## Features
 - Responsive browser interface with dashboard, Word Explorer, lessons, quizzes, feelings vocabulary, and Buddy.
-- Three learning levels: L1 Beginner, L2 Intermediate, and L3 Expert. Caregivers can select a level manually; completing all words in a level advances to the next level automatically.
+- Level-based curriculum: L1 covers A–Z, numbers 1–10, colors, animals, and fruits; L2 covers blending sounds into words, short sentences, and numbers 1–100; L3 includes short stories, sentence building, and fill-in-the-blank practice.
+- Each level has a 10-question quiz aligned to its lessons. Lessons and word cards include animated, interactive practice; number cards are paged in groups of 20.
+- Caregivers can select a level manually; practicing every vocabulary item in that level advances the learner automatically.
 - Progress saved in SQLite, including uniquely practiced words, quiz attempts, stars, and lessons played.
 - Caregiver registration and sign-in. Passwords are stored as salted scrypt hashes; authenticated API access uses a signed bearer token that expires after seven days.
+- Login includes a forgot-password screen, but email delivery is not configured yet, so reset requests are disabled. Caregivers must contact the site administrator until a verified email provider is configured.
 - Buddy detects conversation, learning, engagement, celebration, emotional-support, and safety-redirect modes. It adapts to the learner's saved level and recent progress without turning every conversation into a lesson.
-- Optional Gemini integration with response validation, timeout, and local fallback. The app works without a Gemini API key.
+- Optional Gemini-generated replies adapt to the child's latest message, recent conversation, detected mode, and saved learning history. Replies are validated and time-limited; Buddy switches to local responses if Gemini is missing or unavailable.
 - Browser text-to-speech and speech recognition where supported.
 - API input validation, Helmet security headers, rate limiting, and learner ownership checks.
 
@@ -39,10 +42,11 @@ The app works without Gemini. To enable it, create an API key through Google's A
 | `AI_TIMEOUT_MS` | No | Maximum wait for a Gemini response before using local fallback; defaults to `10000`. |
 | `RATE_LIMIT_WINDOW_MS` | No | API rate-limit window in milliseconds; defaults to `60000`. |
 | `RATE_LIMIT_MAX_REQUESTS` | No | Requests allowed per IP per window on `/api`; defaults to `30`. |
+| `LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS` | No | Word-practice and listen requests allowed per IP per window; defaults to `240` so learners can work through the 100-number Level 2 set. |
 
 ## API quick reference
 
-All `/api` requests are rate-limited. Authenticated endpoints require `Authorization: Bearer <token>`.
+All `/api` requests are rate-limited. Word-practice and listen actions use their separate `LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS` limit; other API requests use `RATE_LIMIT_MAX_REQUESTS`. Authenticated endpoints require `Authorization: Bearer <token>`.
 
 | Method and path | Authentication | Purpose |
 | --- | --- | --- |
@@ -51,10 +55,10 @@ All `/api` requests are rate-limited. Authenticated endpoints require `Authoriza
 | `POST /api/auth/login` | No | Sign in and receive a bearer token and learner ID. |
 | `GET /api/auth/me` | Bearer token | Return caregiver email and linked learner profiles. |
 | `POST /api/auth/logout` | No | Client-side logout acknowledgement; discard the token in the browser. |
-| `GET /api/lessons?level=L1` | No | List lessons for L1, L2, or L3. |
+| `GET /api/lessons?level=L1` | No | List level-aligned lessons and their practice challenges for L1, L2, or L3. |
 | `GET /api/lessons/:id` | No | Return one lesson. |
 | `GET /api/vocabulary?category=animals&level=L1` | No | Filter curated vocabulary. |
-| `GET /api/quizzes?level=L1&category=colors` | No | Return quiz questions without answer keys. |
+| `GET /api/quizzes?level=L1&category=colors` | No | Return the level's 10 quiz questions without answer keys. There are 10 questions for each level. |
 | `POST /api/chat` | Bearer token | Send a learner message and receive Buddy's response. |
 | `GET /api/progress/:learnerId` | Bearer token | Read progress for a learner linked to the caregiver. |
 | `POST /api/progress/attempt` | Bearer token | Submit a quiz answer. Body: `{ "learnerId": "...", "quizId": "...", "selectedItemId": "...", "sessionId": "..." }`. |
@@ -126,6 +130,7 @@ The app does not intentionally save raw microphone recordings. Speech recognitio
 ## Known limitations
 
 - The seven-day signed bearer token is stored in browser `sessionStorage`; caregivers may need to sign in again after closing the browser. The logout endpoint does not revoke an already-issued token.
+- Password reset is not operational until a secure email delivery provider and reset-token workflow are configured. The login page explains this and keeps reset requests disabled rather than exposing reset links or tokens.
 - SQLite is suitable for a single service instance but is not configured for shared multi-instance storage.
 - Level completion is based on practicing every vocabulary item in the selected level; quiz mastery is tracked separately and does not determine automatic level advancement.
 - Browser speech varies by browser and device. Some curriculum content and tests are representative starter examples, not a complete curriculum or end-to-end test suite.

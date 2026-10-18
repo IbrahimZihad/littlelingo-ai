@@ -1,4 +1,4 @@
-import vocabulary from '../data/vocabulary.json' with {type:'json'};
+import { vocabulary } from '../data/curriculum.js';
 
 export function masteryFor(db, learnerId, itemId) {
  const rows=db.prepare('SELECT correct, session_id FROM attempts WHERE learner_id=? AND item_id=? ORDER BY id DESC LIMIT 20').all(learnerId,itemId);
@@ -15,7 +15,7 @@ export function getProgress(db, learnerId) {
  const mastered=skills.filter(s=>s.correct_count>=3 && s.sessions>=2).length;
  const accuracy=total?Math.round(correct/total*100):0;
  const level=learner.level;
- const levelWords=vocabulary.filter(word=>level==='L3'||word.level===level);
+ const levelWords=vocabulary.filter(word=>word.level===level);
  const practicedIds=new Set(db.prepare('SELECT item_id FROM word_practices WHERE learner_id=?').all(learnerId).map(row=>row.item_id));
  const practicedWords=levelWords.filter(word=>practicedIds.has(word.id)).length;
  const totalWordsPracticed=vocabulary.filter(word=>practicedIds.has(word.id)).length;
