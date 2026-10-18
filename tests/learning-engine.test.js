@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import Database from 'better-sqlite3';
+import { once } from 'node:events';
+import { randomUUID } from 'node:crypto';
+import { createApp } from '../src/app.js';
+import { issueToken } from '../src/services/auth.service.js';
 import { getProgress } from '../src/services/learning-engine.service.js';
 
 test('Word Explorer progress counts each practiced word once and follows the selected level', () => {
@@ -44,4 +48,40 @@ test('Quiz mastery no longer advances the learner level automatically', () => {
   assert.equal(progress.masteredWords, 4);
   assert.equal(progress.level, 'L1');
   db.close();
+});
+
+test('Word Explorer practice and listening update caregiver dashboard counts', async () => {
+  const db = new Database(':memory:');
+  db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
+  const caregiverId = randomUUID();
+  const learnerId = randomUUID();
+  db.prepare('INSERT INTO caregivers(id, email, password_hash) VALUES(?, ?, ?)').run(caregiverId, `${caregiverId}@example.test`, 'test');
+  db.prepare('INSERT INTO learners(id, caregiver_id) VALUES(?, ?)').run(learnerId, caregiverId);
+  const originalAuthSecret = process.env.AUTH_SECRET;
+  process.env.AUTH_SECRET = 'learning-engine-test-secret';
+  const server = createApp(db).listen(0);
+
+  try {
+    await once(server, 'listening');
+    const url = `http://127.0.0.1:${server.address().port}/api/progress`;
+    const headers = { authorization: `Bearer ${issueToken(caregiverId)}`, 'content-type': 'application/json' };
+    const listenResponse = await fetch(`${url}/listen`, { method: 'POST', headers, body: JSON.stringify({ learnerId, itemId: 'cat' }) });
+    assert.equal(listenResponse.status, 200);
+    assert.equal((await listenResponse.json()).progress.lessonsCompleted, 1);
+
+    const practiceResponse = await fetch(`${url}/practice`, { method: 'POST', headers, body: JSON.stringify({ learnerId, itemId: 'cat' }) });
+    assert.equal(practiceResponse.status, 200);
+    const practice = await practiceResponse.json();
+    assert.equal(practice.progress.totalWordsPracticed, 1);
+    assert.equal(practice.progress.masteredWords, 0);
+
+    const repeatedPractice = await fetch(`${url}/practice`, { method: 'POST', headers, body: JSON.stringify({ learnerId, itemId: 'cat' }) });
+    assert.equal((await repeatedPractice.json()).progress.totalWordsPracticed, 1);
+  } finally {
+    server.close();
+    await once(server, 'close');
+    db.close();
+    if (originalAuthSecret === undefined) delete process.env.AUTH_SECRET;
+    else process.env.AUTH_SECRET = originalAuthSecret;
+  }
 });

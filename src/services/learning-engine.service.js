@@ -18,6 +18,7 @@ export function getProgress(db, learnerId) {
  const levelWords=vocabulary.filter(word=>level==='L3'||word.level===level);
  const practicedIds=new Set(db.prepare('SELECT item_id FROM word_practices WHERE learner_id=?').all(learnerId).map(row=>row.item_id));
  const practicedWords=levelWords.filter(word=>practicedIds.has(word.id)).length;
+ const totalWordsPracticed=vocabulary.filter(word=>practicedIds.has(word.id)).length;
  const progress=levelWords.length?Math.round(practicedWords/levelWords.length*100):0;
- return {learnerId,level,stars:learner.stars,lessonsCompleted:learner.lessons_completed,attempts:total,accuracy,masteredWords:mastered,practicedWords,totalWords:levelWords.length,progress};
+ return {learnerId,level,stars:learner.stars,lessonsCompleted:learner.lessons_completed,attempts:total,accuracy,masteredWords:mastered,practicedWords,totalWords:levelWords.length,totalWordsPracticed,progress};
 }
