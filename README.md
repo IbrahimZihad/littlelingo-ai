@@ -6,6 +6,7 @@ A playful English-learning web app for children under seven. It includes Buddy c
 - Responsive mobile-first UI with mascot and dashboard.
 - L1/L2/L3 lesson structure and bundled vocabulary.
 - Text chat with local fallback and optional Gemini.
+- Mode and mood detection lets Buddy switch between conversation, play, emotional support, celebration, and learning when requested.
 - Word Explorer, quiz feedback, stars and progress tracking.
 - Word Explorer practice progress and caregiver-selectable beginner, intermediate, and expert levels.
 - Browser text-to-speech and speech recognition where supported.

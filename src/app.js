@@ -35,15 +35,16 @@ export function createApp(db) {
  app.post('/api/chat',requireAuth,async(req,res)=>{const started=Date.now();const parsed=chatSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'Please send a short message and try again.'});const {learnerId,message,context={}}=parsed.data;
   if(!ownsLearner(db,req.caregiverId,learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});
   const learnerContext=getLearnerContext(db,learnerId);
-  const responseContext={...learnerContext,currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,recentTurns:(context.history||[]).slice(-4)};
-  let result,source='fallback';if(isUnsafe(message)){result={mode:'SAFETY_REDIRECT',message:safetyReply(),suggestedActivity:null,learningFeedback:null};}else{
-   const mode=detectMode(message,responseContext).mode;
+  const detected=detectMode(message,context);
+  const responseContext={...learnerContext,detectedMode:detected.mode,mood:detected.mood,currentTopic:context.currentTopic||null,currentActivity:context.currentActivity||null,recentTurns:(context.history||[]).slice(-4)};
+  let result,source='fallback';if(detected.mode==='SAFETY_REDIRECT'||isUnsafe(message)){result={mode:'SAFETY_REDIRECT',message:safetyReply(),suggestedActivity:null,learningFeedback:null};}else{
+   const mode=detected.mode;
    const quick=/^(hi|hello|hey|thanks|thank you)[!. ]*$/i.test(message);
    if(!quick){result=await askGemini(message,responseContext);if(result)source='gemini';}
    if(!result)result=fallbackReply(message,responseContext);
    if(mode==='SAFETY_REDIRECT'){result={mode,message:safetyReply(),suggestedActivity:null,learningFeedback:null};}
   }
-  res.json({...result,source,durationMs:Date.now()-started});
+  res.json({...result,mode:detected.mode,mood:detected.mood,source,durationMs:Date.now()-started});
  });
  const attemptSchema=z.object({learnerId:z.string().regex(/^[a-f0-9-]{16,40}$/i),quizId:z.string().min(1).max(50),selectedItemId:z.string().min(1).max(50),sessionId:z.string().regex(/^[a-f0-9-]{16,40}$/i)});
  app.post('/api/progress/attempt',requireAuth,(req,res)=>{const p=attemptSchema.safeParse(req.body);if(!p.success)return res.status(400).json({error:'Invalid learning attempt.'});const a=p.data;if(!ownsLearner(db,req.caregiverId,a.learnerId))return res.status(403).json({error:'This learner profile is not linked to your caregiver account.'});const quiz=quizzes.find(q=>q.id===a.quizId);if(!quiz)return res.status(404).json({error:'Quiz not found.'});if(!quiz.options.some(o=>o.itemId===a.selectedItemId))return res.status(400).json({error:'Invalid quiz answer.'});const correct=a.selectedItemId===quiz.answer;const itemId=correct?quiz.answer:a.selectedItemId;const transaction=db.transaction(()=>{db.prepare('INSERT OR IGNORE INTO learners(id) VALUES(?)').run(a.learnerId);db.prepare('INSERT INTO attempts(learner_id,item_id,skill,correct,session_id) VALUES(?,?,?,?,?)').run(a.learnerId,itemId,quiz.category,correct?1:0,a.sessionId);db.prepare('UPDATE learners SET stars=stars+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(correct?1:0,a.learnerId);});transaction();res.json({ok:true,correct,correctItemId:quiz.answer,mastery:masteryFor(db,a.learnerId,quiz.answer),progress:getProgress(db,a.learnerId)});});
