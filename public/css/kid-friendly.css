@@ -39,6 +39,42 @@ button {
   box-shadow: 0 12px 24px #30295f1a;
 }
 
+/* Tiles that read as pickable objects get the same lift as the action and word cards. */
+.stat-card,
+.lesson-word-card,
+.progress-panel,
+.achievement-strip {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.stat-card:hover,
+.lesson-word-card:hover,
+.progress-panel:hover,
+.achievement-strip:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px #30295f1a;
+  border-color: #bfe0f5;
+}
+
+/* Page-sized panels hold a form the child is typing into, so they gain depth on hover
+   without sliding out from under the cursor. */
+.auth-card,
+.chat-card,
+.buddy-chat-card,
+.quiz-card,
+.caregiver-card {
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.auth-card:hover,
+.chat-card:hover,
+.buddy-chat-card:hover,
+.quiz-card:hover,
+.caregiver-card:hover {
+  box-shadow: 0 16px 34px #30295f22;
+  border-color: #bcdcf2;
+}
+
 .primary:active,
 .action-card:active,
 .word-card button:active,
