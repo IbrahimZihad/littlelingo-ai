@@ -7,6 +7,12 @@ test('ordinary chat remains conversation even while a learning activity is open'
   assert.equal(detectMode('I saw a butterfly', { currentActivity: 'words' }).mode, 'CONVERSATION');
 });
 
+test('a child naming something they are learning about gets that thing back', () => {
+  assert.match(fallbackReply('Tell me about cats.', { level: 'L1' }).message, /^Cat:/);
+  assert.match(fallbackReply('I like apples.', { level: 'L1' }).message, /^Apple:/);
+  assert.doesNotMatch(fallbackReply('Can you catch me?', { level: 'L1' }).message, /^Cat:/);
+});
+
 test('explicit requests switch between learning and engagement', () => {
   assert.equal(detectMode('Can you teach me a new word?').mode, 'LEARNING');
   assert.equal(detectMode('I am bored, can we play?').mode, 'ENGAGEMENT');

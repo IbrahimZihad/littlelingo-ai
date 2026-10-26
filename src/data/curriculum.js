@@ -77,6 +77,7 @@ const extraVocabulary = [
   ['make-cat', 'c-a-t makes cat', '🐱', 'word-building', 'Sound it out: c-a-t. The sounds make cat.', 'L2'],
   ['make-sun', 's-u-n makes sun', '☀️', 'word-building', 'Sound it out: s-u-n. The sounds make sun.', 'L2'],
   ['make-map', 'm-a-p makes map', '🗺️', 'word-building', 'Sound it out: m-a-p. The sounds make map.', 'L2'],
+  ['make-bus', 'b-u-s makes bus', '🚌', 'word-building', 'Sound it out: b-u-s. The sounds make bus.', 'L2'],
   ['sentence-bird', 'I see the bird.', '🐦', 'sentences', 'Who? I. What do I do? see. What do I see? the bird.', 'L2'],
   ['sentence-dog', 'The dog can run.', '🐶', 'sentences', 'Read the whole sentence: The dog can run.', 'L2'],
   ['sentence-apple', 'I like a red apple.', '🍎', 'sentences', 'Read the whole sentence: I like a red apple.', 'L2'],
@@ -119,9 +120,15 @@ export const curriculumLessons = [
   { id: 'color-names', level: 'L1', title: 'Color Garden', category: 'colors', description: 'Name bright colors all around you.', challenge: { prompt: 'What color is a green leaf?', options: [{ label: 'Green', emoji: '💚', correct: true }, { label: 'Pink', emoji: '🩷' }, { label: 'Blue', emoji: '💙' }] } },
   { id: 'animal-names', level: 'L1', title: 'Animal Friends', category: 'animals', description: 'Meet animals and the sounds they make.', challenge: { prompt: 'Which animal can hop?', options: [{ label: 'Rabbit', emoji: '🐰', correct: true }, { label: 'Fish', emoji: '🐠' }, { label: 'Cow', emoji: '🐮' }] } },
   { id: 'fruit-names', level: 'L1', title: 'Fruit Basket', category: 'fruits', description: 'Discover fruit names, colors, and tastes.', challenge: { prompt: 'Which fruit is often long and yellow?', options: [{ label: 'Banana', emoji: '🍌', correct: true }, { label: 'Grapes', emoji: '🍇' }, { label: 'Pear', emoji: '🍐' }] } },
+  { id: 'family-people', level: 'L1', title: 'My Family', category: 'family', description: 'Name the people who love and help you.', challenge: { prompt: 'Which word is for someone in your family?', options: [{ label: 'Grandma', emoji: '👵', correct: true }, { label: 'Apple', emoji: '🍎' }, { label: 'Kite', emoji: '🪁' }] } },
+  { id: 'feelings-names', level: 'L1', title: 'Little Big Feelings', category: 'feelings', description: 'Say how you feel with simple feeling words.', challenge: { prompt: 'Your face shows 😠. How do you feel?', options: [{ label: 'Angry', emoji: '😠', correct: true }, { label: 'Happy', emoji: '😊' }, { label: 'Calm', emoji: '😌' }] } },
   { id: 'build-words', level: 'L2', title: 'Build a Word', category: 'word-building', description: 'Blend letter sounds to make small words.', challenge: { prompt: 'Which sounds make sun?', options: [{ label: 's-u-n', emoji: '☀️', correct: true }, { label: 'm-a-p', emoji: '🗺️' }, { label: 'c-a-t', emoji: '🐱' }] } },
   { id: 'make-sentences', level: 'L2', title: 'Little Sentences', category: 'sentences', description: 'Put words together to say a simple idea.', challenge: { prompt: 'Which one is a complete sentence?', options: [{ label: 'The dog can run.', emoji: '🐶', correct: true }, { label: 'dog the run', emoji: '🧩' }, { label: 'can the', emoji: '🔤' }] } },
   { id: 'count-1-100', level: 'L2', title: 'Number Trail to 100', category: 'numbers', description: 'Explore number names from 1 to 100.', challenge: { prompt: 'What comes after 29?', options: [{ label: '28', emoji: '🔢' }, { label: '30', emoji: '3️⃣0️⃣', correct: true }, { label: '40', emoji: '🔟' }] } },
+  { id: 'toy-box', level: 'L2', title: 'Toy Box Treasures', category: 'toys', description: 'Name your toys and what you do with them.', challenge: { prompt: 'Which toy flies in the wind?', options: [{ label: 'Kite', emoji: '🪁', correct: true }, { label: 'Doll', emoji: '🪆' }, { label: 'Ball', emoji: '⚽' }] } },
+  { id: 'action-words', level: 'L2', title: 'What Can You Do?', category: 'actions', description: 'Use action words to talk about moving your body.', challenge: { prompt: 'What do you do with your hands during a happy song?', options: [{ label: 'Clap', emoji: '👏', correct: true }, { label: 'Sleep', emoji: '😴' }, { label: 'Eat', emoji: '🍽️' }] } },
+  { id: 'everyday-things', level: 'L2', title: 'Everyday Helpers', category: 'everyday', description: 'Find words for things you use every day.', challenge: { prompt: 'What do you wear on your feet?', options: [{ label: 'Door', emoji: '🚪' }, { label: 'Shoe', emoji: '👟', correct: true }, { label: 'Spoon', emoji: '🥄' }] } },
+  { id: 'nature-walk', level: 'L2', title: 'Out in Nature', category: 'nature', description: 'Look up and down for nature words outside.', challenge: { prompt: 'What shines in the daytime sky?', options: [{ label: 'Moon', emoji: '🌙' }, { label: 'Star', emoji: '⭐' }, { label: 'Sun', emoji: '☀️', correct: true }] } },
   { id: 'read-stories', level: 'L3', title: 'Short Story Shelf', category: 'reading', description: 'Read a short story and think about what happened.', challenge: { prompt: 'In “Mia and the Seed,” where does Mia put the seed?', options: [{ label: 'In the soil', emoji: '🪴', correct: true }, { label: 'In the sky', emoji: '🌤️' }, { label: 'In a pond', emoji: '🪷' }] } },
   { id: 'build-a-sentence', level: 'L3', title: 'Sentence Builder', category: 'sentence-builder', description: 'Put words in order to make a sentence.', challenge: { prompt: 'Which sentence sounds right?', options: [{ label: 'The little bird can fly.', emoji: '🐦', correct: true }, { label: 'Bird little the fly can.', emoji: '🧩' }, { label: 'Fly can bird the little.', emoji: '🔤' }] } },
   { id: 'fill-the-gap', level: 'L3', title: 'Fill in the Blank', category: 'fill-blanks', description: 'Choose a word that makes the sentence complete.', challenge: { prompt: 'Fish can ___.', options: [{ label: 'swim', emoji: '🐟', correct: true }, { label: 'fly', emoji: '🪽' }, { label: 'read', emoji: '📖' }] } }
@@ -166,19 +173,33 @@ export const quizzes = [
   quizQuestion('l3-sentence-order', 'L3', 'sentence-builder', 'Which sentence has the words in the right order?', 'sentence-builder-right', [['The little bird can fly.', '🐦', 'sentence-builder-right'], ['Bird little the fly can.', '🧩', 'sentence-builder-wrong'], ['Fly can bird the little.', '🔤', 'sentence-builder-reversed']])
 ];
 
-function curriculumTopic(text) {
-  const topicAliases = [
-    ['numbers', /\b(numbers?|count(?:ing)?)\b/i],
-    ['alphabet', /\b(alphabet|letters?|sounds?)\b/i],
-    ['colors', /\b(colou?rs?)\b/i],
-    ['animals', /\b(animals?|pets?)\b/i],
-    ['fruits', /\b(fruits?)\b/i],
-    ['word-building', /\b(word building|blend(?:ing)?|sounds make words)\b/i],
-    ['sentences', /\b(sentences?|sentence building)\b/i],
-    ['reading', /\b(stories|story|reading|read)\b/i],
-    ['fill-blanks', /\b(fill in the blanks?|fill the blanks?)\b/i]
-  ];
-  return topicAliases.find(([, pattern]) => pattern.test(text))?.[0] || null;
+// One table for both the tutor context and the local fallback: two copies drifted once
+// already, and a lesson the matcher cannot name is a lesson Buddy cannot teach.
+// Order is precedence, so the newer everyday categories sit behind the core ones.
+const curriculumTopicAliases = [
+  ['numbers', /\b(numbers?|count(?:ing)?)\b/i],
+  ['alphabet', /\b(alphabet|letters?|sounds?)\b/i],
+  ['colors', /\b(colou?rs?)\b/i],
+  ['animals', /\b(animals?|pets?)\b/i],
+  ['fruits', /\b(fruits?)\b/i],
+  ['word-building', /\b(word building|blend(?:ing)?|sounds make words)\b/i],
+  ['sentences', /\b(sentences?|sentence building)\b/i],
+  ['reading', /\b(stories|story|reading|read)\b/i],
+  ['fill-blanks', /\b(fill in the blanks?|fill the blanks?)\b/i],
+  ['family', /\b(family|mum|mom|mother|dad|father|sister|brother|grandma|grandpa|baby)\b/i],
+  ['feelings', /\b(feelings?|glad|happy|sad|angry|mad|scared|worried|tired|excited|calm)\b/i],
+  ['toys', /\b(toys?|dolls?|blocks|teddy|bears?|kites?|balls?)\b/i],
+  ['actions', /\b(actions?|verbs?|running|run|jump(?:ing|s)?|clap(?:ping|s)?|eat(?:ing|s)?|drink(?:ing|s)?|sleep(?:ing|s)?)\b/i],
+  ['everyday', /\b(everyday|daily|shoes?|bags?|pencils?|spoons?|doors?|books?|cup|cups)\b/i],
+  ['nature', /\b(nature|outside|garden|sun|moon|stars?|trees?|flowers?|rain(?:y)?|leaves|leaf)\b/i]
+];
+
+export function curriculumTopic(text) {
+  const plain = String(text || '').trim().toLowerCase();
+  // The app also passes a category through as the topic, and hyphenated names such as
+  // "word-building" never match the wording patterns below.
+  if (curriculumLessons.some(lesson => lesson.category === plain)) return plain;
+  return curriculumTopicAliases.find(([, pattern]) => pattern.test(plain))?.[0] || null;
 }
 
 export function getTutorCurriculumContext({ level, topic, lessonId, itemId, message }) {

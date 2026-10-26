@@ -1,73 +1,81 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import Database from 'better-sqlite3';
 import { once } from 'node:events';
-import { randomUUID } from 'node:crypto';
 import { createApp } from '../src/app.js';
 import { issueToken } from '../src/services/auth.service.js';
 import { getLearnerContext, getProgress } from '../src/services/learning-engine.service.js';
 import { fallbackReply } from '../src/services/fallback.service.js';
 import { vocabulary, quizzes, curriculumLessons } from '../src/data/curriculum.js';
+import { openTestDatabase, closeTestDatabase, seed, seedLearner, dispose, write } from './helpers/database.js';
 
-test('Word Explorer progress counts each practiced word once and follows the selected level', () => {
-  const db = new Database(':memory:');
-  db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
-  db.prepare('INSERT INTO learners(id, level) VALUES(?, ?)').run('learner-1', 'L1');
+// Every case in this file talks to the same pooled connection: opening one per test
+// against a managed server would measure the handshake rather than the queries.
+let shared;
+const database = async () => shared ??= await openTestDatabase();
+after(async () => { if (shared) await closeTestDatabase(shared); });
 
-  const initial = getProgress(db, 'learner-1');
-  assert.equal(initial.totalWords, vocabulary.filter(word => word.level === 'L1').length);
-  assert.equal(initial.practicedWords, 0);
-  assert.equal(initial.progress, 0);
+test('Word Explorer progress counts each practiced word once and follows the selected level', async () => {
+  const db = await database();
+  const learnerId = await seedLearner(db, { level: 'L1' });
+  try {
+    const initial = await getProgress(db, learnerId);
+    assert.equal(initial.totalWords, vocabulary.filter(word => word.level === 'L1').length);
+    assert.equal(initial.practicedWords, 0);
+    assert.equal(initial.progress, 0);
 
-  db.prepare('INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)').run('learner-1', 'cat');
-  db.prepare('INSERT OR IGNORE INTO word_practices(learner_id, item_id) VALUES(?, ?)').run('learner-1', 'cat');
-  const levelOne = getProgress(db, 'learner-1');
-  assert.equal(levelOne.practicedWords, 1);
-  assert.equal(levelOne.progress, Math.round(100 / initial.totalWords));
+    await write(db, 'INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)', [learnerId, 'cat']);
+    await write(db, 'INSERT IGNORE INTO word_practices(learner_id, item_id) VALUES(?, ?)', [learnerId, 'cat']);
+    const levelOne = await getProgress(db, learnerId);
+    assert.equal(levelOne.practicedWords, 1);
+    assert.equal(levelOne.progress, Math.round(100 / initial.totalWords));
 
-  db.prepare('UPDATE learners SET level=? WHERE id=?').run('L2', 'learner-1');
-  const levelTwo = getProgress(db, 'learner-1');
-  assert.equal(levelTwo.level, 'L2');
-  assert.equal(levelTwo.totalWords, vocabulary.filter(word => word.level === 'L2').length);
-  assert.equal(levelTwo.practicedWords, 0);
-  assert.equal(levelTwo.progress, 0);
-  db.close();
-});
-
-test('Quiz mastery no longer advances the learner level automatically', () => {
-  const db = new Database(':memory:');
-  db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
-  db.prepare('INSERT INTO learners(id, level, lessons_completed) VALUES(?, ?, ?)').run('learner-2', 'L1', 2);
-  const insertAttempt = db.prepare('INSERT INTO attempts(learner_id, item_id, skill, correct, session_id) VALUES(?, ?, ?, 1, ?)');
-  for (const itemId of ['cat', 'dog', 'bird', 'fish']) {
-    insertAttempt.run('learner-2', itemId, 'vocabulary', 'session-1');
-    insertAttempt.run('learner-2', itemId, 'vocabulary', 'session-1');
-    insertAttempt.run('learner-2', itemId, 'vocabulary', 'session-2');
+    await write(db, 'UPDATE learners SET level=? WHERE id=?', ['L2', learnerId]);
+    const levelTwo = await getProgress(db, learnerId);
+    assert.equal(levelTwo.level, 'L2');
+    assert.equal(levelTwo.totalWords, vocabulary.filter(word => word.level === 'L2').length);
+    assert.equal(levelTwo.practicedWords, 0);
+    assert.equal(levelTwo.progress, 0);
+  } finally {
+    await dispose(db, { learnerIds: [learnerId] });
   }
-
-  const progress = getProgress(db, 'learner-2');
-  assert.equal(progress.masteredWords, 4);
-  assert.equal(progress.level, 'L1');
-  db.close();
 });
 
-test('Buddy learner context includes level, practiced words, and recent quiz results', () => {
-  const db = new Database(':memory:');
-  db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
-  db.prepare('INSERT INTO learners(id, level) VALUES(?, ?)').run('learner-context', 'L2');
-  db.prepare('INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)').run('learner-context', 'cat');
-  db.prepare('INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)').run('learner-context', 'dog');
-  const attempt = db.prepare('INSERT INTO attempts(learner_id, item_id, skill, correct, session_id) VALUES(?, ?, ?, ?, ?)');
-  attempt.run('learner-context', 'cat', 'animals', 0, 'session-1');
-  attempt.run('learner-context', 'dog', 'animals', 1, 'session-1');
+test('Quiz mastery no longer advances the learner level automatically', async () => {
+  const db = await database();
+  const learnerId = await seedLearner(db, { level: 'L1' });
+  try {
+    await write(db, 'UPDATE learners SET lessons_completed=? WHERE id=?', [2, learnerId]);
+    for (const itemId of ['cat', 'dog', 'bird', 'fish']) {
+      for (const sessionId of ['session-1', 'session-1', 'session-2']) {
+        await write(db, 'INSERT INTO attempts(learner_id, item_id, skill, correct, session_id) VALUES(?, ?, ?, 1, ?)', [learnerId, itemId, 'vocabulary', sessionId]);
+      }
+    }
 
-  const context = getLearnerContext(db, 'learner-context');
-  assert.equal(context.level, 'L2');
-  assert.deepEqual(context.learningHistory.recentWords, ['Dog', 'Cat']);
-  assert.deepEqual(context.learningHistory.recentQuizResults.map(result => result.result), ['correct', 'needs-practice']);
-  assert.equal(context.learningHistory.wordsPracticed, 2);
-  db.close();
+    const progress = await getProgress(db, learnerId);
+    assert.equal(progress.masteredWords, 4);
+    assert.equal(progress.level, 'L1');
+  } finally {
+    await dispose(db, { learnerIds: [learnerId] });
+  }
+});
+
+test('Buddy learner context includes level, practiced words, and recent quiz results', async () => {
+  const db = await database();
+  const learnerId = await seedLearner(db, { level: 'L2' });
+  try {
+    await write(db, 'INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)', [learnerId, 'cat']);
+    await write(db, 'INSERT INTO word_practices(learner_id, item_id) VALUES(?, ?)', [learnerId, 'dog']);
+    await write(db, 'INSERT INTO attempts(learner_id, item_id, skill, correct, session_id) VALUES(?, ?, ?, ?, ?)', [learnerId, 'cat', 'animals', 0, 'session-1']);
+    await write(db, 'INSERT INTO attempts(learner_id, item_id, skill, correct, session_id) VALUES(?, ?, ?, ?, ?)', [learnerId, 'dog', 'animals', 1, 'session-1']);
+
+    const context = await getLearnerContext(db, learnerId);
+    assert.equal(context.level, 'L2');
+    assert.deepEqual(context.learningHistory.recentWords, ['Dog', 'Cat']);
+    assert.deepEqual(context.learningHistory.recentQuizResults.map(result => result.result), ['correct', 'needs-practice']);
+    assert.equal(context.learningHistory.wordsPracticed, 2);
+  } finally {
+    await dispose(db, { learnerIds: [learnerId] });
+  }
 });
 
 test('Fallback word teaching follows learner level and avoids a recently practiced word', () => {
@@ -87,12 +95,8 @@ test('Fallback word teaching follows learner level and avoids a recently practic
 });
 
 test('Word Explorer practice and listening update caregiver dashboard counts', async () => {
-  const db = new Database(':memory:');
-  db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
-  const caregiverId = randomUUID();
-  const learnerId = randomUUID();
-  db.prepare('INSERT INTO caregivers(id, email, password_hash) VALUES(?, ?, ?)').run(caregiverId, `${caregiverId}@example.test`, 'test');
-  db.prepare('INSERT INTO learners(id, caregiver_id) VALUES(?, ?)').run(learnerId, caregiverId);
+  const db = await database();
+  const { caregiverId, learnerId } = await seed(db);
   const originalAuthSecret = process.env.AUTH_SECRET;
   const originalRateLimit = process.env.RATE_LIMIT_MAX_REQUESTS;
   const originalActivityRateLimit = process.env.LEARNING_ACTIVITY_RATE_LIMIT_MAX_REQUESTS;
@@ -163,7 +167,7 @@ test('Word Explorer practice and listening update caregiver dashboard counts', a
   } finally {
     server.close();
     await once(server, 'close');
-    db.close();
+    await dispose(db, { caregiverId, learnerIds: [learnerId] });
     if (originalAuthSecret === undefined) delete process.env.AUTH_SECRET;
     else process.env.AUTH_SECRET = originalAuthSecret;
     if (originalRateLimit === undefined) delete process.env.RATE_LIMIT_MAX_REQUESTS;

@@ -1,24 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { randomUUID } from 'node:crypto';
-import Database from 'better-sqlite3';
 import { createApp } from '../src/app.js';
 import { issueToken } from '../src/services/auth.service.js';
+import { openTestDatabase, closeTestDatabase, seed, dispose } from './helpers/database.js';
 
 test('chat route returns curriculum-aware fallback and safe AI status when Gemini is not configured', async () => {
   const previousKey = process.env.GEMINI_API_KEY;
   delete process.env.GEMINI_API_KEY;
-  const db = new Database(':memory:');
-  db.exec(fs.readFileSync(new URL('../src/database/schema.sql', import.meta.url), 'utf8'));
-  const caregiverId = randomUUID();
-  const learnerId = randomUUID();
-  db.prepare('INSERT INTO caregivers(id, email, password_hash) VALUES(?, ?, ?)').run(
-    caregiverId,
-    `${caregiverId}@example.test`,
-    'test'
-  );
-  db.prepare('INSERT INTO learners(id, caregiver_id) VALUES(?, ?)').run(learnerId, caregiverId);
+  const db = await openTestDatabase();
+  const { caregiverId, learnerId, learnerIds } = await seed(db);
   const server = createApp(db).listen(0);
 
   try {
@@ -75,7 +65,8 @@ test('chat route returns curriculum-aware fallback and safe AI status when Gemin
     assert.doesNotMatch(followUpResult.message, /seed/i);
   } finally {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-    db.close();
+    await dispose(db, { caregiverId, learnerIds });
+    await closeTestDatabase(db);
     if (previousKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = previousKey;
   }

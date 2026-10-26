@@ -1,8 +1,26 @@
 {
-  "name": "littlelingo-ai", "version": "1.0.0", "private": true,
+  "name": "littlelingo-ai",
+  "version": "1.0.0",
+  "private": true,
   "description": "Privacy-conscious English learning companion for young children",
-  "type": "module", "main": "src/server.js",
-  "scripts": {"start":"node src/server.js", "dev":"node --watch src/server.js", "test":"node --test", "benchmark":"node scripts/benchmark.js"},
-  "engines":{"node":">=20"},
-  "dependencies": {"@google/genai":"^1.11.0", "better-sqlite3":"^12.2.0", "dotenv":"^16.6.1", "express":"^5.1.0", "express-rate-limit":"^8.0.1", "helmet":"^8.1.0", "zod":"^4.0.5"}
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test --test-concurrency=1",
+    "benchmark": "node scripts/benchmark.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google/genai": "^1.11.0",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
+    "mysql2": "^3.24.6",
+    "zod": "^4.0.5"
+  }
 }

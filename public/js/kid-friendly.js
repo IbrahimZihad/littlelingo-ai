@@ -1,16 +1,11 @@
-const stylesheet = document.createElement('link');
-stylesheet.rel = 'stylesheet';
-stylesheet.href = '/css/kid-friendly.css';
-document.head.append(stylesheet);
-
 const dashboard = document.querySelector('#dashboard');
-const dashboardHeading = dashboard?.querySelector('.welcome-row h2');
+const dashboardHeading = dashboard?.querySelector('.welcome-row h1');
 if (dashboardHeading) dashboardHeading.textContent = 'Pick a little adventure! 🌈';
 
 const dashboardIntro = dashboard?.querySelector('.welcome-row .muted');
 if (dashboardIntro) dashboardIntro.textContent = 'Tap a big button to start playing.';
 
-const activityHeading = dashboard?.querySelector(':scope > h3');
+const activityHeading = dashboard?.querySelector(':scope > h2');
 if (activityHeading) activityHeading.textContent = 'What sounds fun?';
 
 const activityCopy = [

@@ -55,7 +55,7 @@ button {
 .feelings-grid button:focus-visible,
 .suggestions button:focus-visible,
 .category-tabs button:focus-visible {
-  outline: 4px solid #ffb84d;
+  outline: 4px solid #075a91;
   outline-offset: 3px;
 }
 
@@ -66,7 +66,7 @@ button {
   font-weight: 700;
 }
 
-.dashboard > h3 {
+.dashboard > h2 {
   margin-top: 34px;
   font-size: clamp(1.55rem, 4vw, 2rem);
 }
@@ -412,7 +412,7 @@ button {
 }
 
 .lesson-choice small {
-  color: #58738a;
+  color: #4a6375;
   font-size: .95rem;
   line-height: 1.4;
 }
@@ -443,7 +443,7 @@ button {
 }
 
 .lesson-word-card p {
-  color: #58738a;
+  color: #4a6375;
   line-height: 1.5;
 }
 
@@ -516,9 +516,8 @@ body {
   background: linear-gradient(145deg, #fff3ba, #ffb8a9);
 }
 
-.brand b,
-.hero h1 span {
-  color: #e65b8d;
+.brand b {
+  color: #b02a63;
 }
 
 .parent-link {
@@ -534,7 +533,7 @@ body {
 .hero-copy .eyebrow,
 .welcome-row .eyebrow,
 .screen-heading .eyebrow {
-  color: #df4e85;
+  color: #b02a63;
 }
 
 .hero-art {
@@ -809,7 +808,7 @@ body {
 
 .send-btn,
 .primary {
-  background: linear-gradient(135deg, #8055df, #e44f91);
+  background: linear-gradient(135deg, #8055df, #b8337a);
   box-shadow: 0 8px 18px rgb(113 67 190 / 25%);
 }
 
@@ -1301,7 +1300,7 @@ body {
 }
 
 .hero h1 span {
-  color: #e66f32;
+  color: #bf4e0e;
 }
 
 .hero-text {
@@ -1327,7 +1326,7 @@ body {
 }
 
 .privacy-note {
-  color: #64778a;
+  color: #5a6b7d;
 }
 
 .hero-art {
@@ -1398,7 +1397,7 @@ body {
 .card-one {
   top: 14%;
   left: 5%;
-  color: #bb512e;
+  color: #a8481f;
 }
 
 .card-two {
@@ -1409,7 +1408,7 @@ body {
 .card-three {
   right: 4%;
   bottom: 34%;
-  color: #0877bd;
+  color: #075a91;
 }
 
 .dashboard,
@@ -1417,6 +1416,7 @@ body {
   padding-top: clamp(30px, 5vw, 55px);
 }
 
+.welcome-row h1,
 .welcome-row h2,
 .screen h2 {
   color: #20324a;
@@ -1445,7 +1445,7 @@ body {
 }
 
 .level-control select:focus-visible {
-  outline-color: #0877bd66;
+  outline-color: #075a91;
 }
 
 .stat-card,
@@ -1465,7 +1465,7 @@ body {
   border-radius: 18px;
 }
 
-.dashboard > h3 {
+.dashboard > h2 {
   color: #20324a;
 }
 
@@ -1676,7 +1676,7 @@ body {
 
 .auth-card input:focus {
   border-color: #0877bd;
-  outline-color: #0877bd33;
+  outline-color: #075a91;
 }
 
 .auth-switch {
@@ -1782,11 +1782,10 @@ body {
 }
 
 .brand b,
-.hero h1 span,
 .hero-copy .eyebrow,
 .welcome-row .eyebrow,
 .screen-heading .eyebrow {
-  color: #df4e85;
+  color: #b02a63;
 }
 
 .parent-link {
@@ -1861,7 +1860,7 @@ body {
 .send-btn,
 .primary {
   border-color: #7247cf;
-  background: linear-gradient(135deg, #8055df, #e44f91);
+  background: linear-gradient(135deg, #8055df, #b8337a);
   box-shadow: 0 8px 18px rgb(113 67 190 / 25%);
 }
 
@@ -1902,7 +1901,7 @@ body {
   padding-inline: 12px;
   border: 3px solid #fff;
   border-radius: 24px;
-  background: linear-gradient(145deg, #7050d8, #e8549a 62%, #ff9f4b);
+  background: linear-gradient(145deg, #7050d8, #b8337a 62%, #b3520c);
   box-shadow: 0 8px 18px rgb(93 58 164 / 24%);
   color: #fff;
   font-family: ui-rounded, "Trebuchet MS", system-ui, sans-serif;
@@ -1957,7 +1956,7 @@ body {
   place-items: center;
   border: 2px solid #fff;
   border-radius: 17px;
-  background: linear-gradient(145deg, #7050d8, #e8549a 62%, #ff9f4b);
+  background: linear-gradient(145deg, #7050d8, #b8337a 62%, #b3520c);
   box-shadow: 0 6px 13px rgb(93 58 164 / 22%);
   color: #fff;
   font-size: clamp(1.25rem, 4vw, 1.8rem);
@@ -1999,7 +1998,7 @@ body {
   margin: 0 auto 10px;
   border: 3px solid #fff;
   border-radius: 24px;
-  background: linear-gradient(145deg, #6caeff, #7154dc 58%, #e8549a);
+  background: linear-gradient(145deg, #2b6bc4, #7154dc 58%, #b8337a);
   box-shadow: 0 8px 18px rgb(93 58 164 / 20%);
   color: #fff;
   font-size: 1.55rem;
@@ -2216,7 +2215,7 @@ body {
 }
 
 .buddy-chat-card .send-btn {
-  background: linear-gradient(140deg, #7554db, #df559f);
+  background: linear-gradient(140deg, #7554db, #b8337a);
 }
 
 .buddy-chat-card .voice-controls {

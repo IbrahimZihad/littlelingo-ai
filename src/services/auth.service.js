@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual, createHmac } from 'node:crypto';
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual, createHmac, createHash } from 'node:crypto';
 const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const secret = () => process.env.AUTH_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'development-only-change-this-secret');
 export function hashPassword(password) {
@@ -15,6 +15,7 @@ export function issueToken(caregiverId) {
   const sig=createHmac('sha256',key).update(payload).digest('base64url'); return `${payload}.${sig}`;
 }
 export function verifyToken(token) {
-  try { const key=secret(); if(!key || typeof token!=='string') return null; const [payload,sig]=token.split('.'); if(!payload||!sig)return null; const expected=createHmac('sha256',key).update(payload).digest();const actual=Buffer.from(sig,'base64url');if(expected.length!==actual.length||!timingSafeEqual(expected,actual))return null;const data=JSON.parse(Buffer.from(payload,'base64url').toString());if(!data.sub||data.exp<Math.floor(Date.now()/1000))return null;return {caregiverId:data.sub}; } catch { return null; }
+  try { const key=secret(); if(!key || typeof token!=='string') return null; const [payload,sig]=token.split('.'); if(!payload||!sig)return null; const expected=createHmac('sha256',key).update(payload).digest();const actual=Buffer.from(sig,'base64url');if(expected.length!==actual.length||!timingSafeEqual(expected,actual))return null;const data=JSON.parse(Buffer.from(payload,'base64url').toString());if(!data.sub||!Number.isInteger(data.exp)||data.exp<Math.floor(Date.now()/1000))return null;return {caregiverId:data.sub,exp:data.exp}; } catch { return null; }
 }
+export const tokenHash = token => createHash('sha256').update(String(token || '')).digest('hex');
 export const newId = () => randomUUID();

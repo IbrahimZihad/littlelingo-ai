@@ -190,5 +190,229 @@
     "category": "nature",
     "sentence": "The tree is tall.",
     "level": "L2"
+  },
+  {
+    "id": "sister",
+    "word": "Sister",
+    "emoji": "👧",
+    "category": "family",
+    "sentence": "This is my sister.",
+    "level": "L1"
+  },
+  {
+    "id": "brother",
+    "word": "Brother",
+    "emoji": "👦",
+    "category": "family",
+    "sentence": "This is my brother.",
+    "level": "L1"
+  },
+  {
+    "id": "baby",
+    "word": "Baby",
+    "emoji": "👶",
+    "category": "family",
+    "sentence": "The baby is small.",
+    "level": "L1"
+  },
+  {
+    "id": "grandma",
+    "word": "Grandma",
+    "emoji": "👵",
+    "category": "family",
+    "sentence": "Grandma gives a hug.",
+    "level": "L1"
+  },
+  {
+    "id": "grandpa",
+    "word": "Grandpa",
+    "emoji": "👴",
+    "category": "family",
+    "sentence": "Grandpa tells a story.",
+    "level": "L1"
+  },
+  {
+    "id": "excited",
+    "word": "Excited",
+    "emoji": "🤩",
+    "category": "feelings",
+    "sentence": "I feel excited to play.",
+    "level": "L1"
+  },
+  {
+    "id": "angry",
+    "word": "Angry",
+    "emoji": "😠",
+    "category": "feelings",
+    "sentence": "It is okay to feel angry.",
+    "level": "L1"
+  },
+  {
+    "id": "worried",
+    "word": "Worried",
+    "emoji": "😟",
+    "category": "feelings",
+    "sentence": "It is okay to feel worried.",
+    "level": "L1"
+  },
+  {
+    "id": "tired",
+    "word": "Tired",
+    "emoji": "🥱",
+    "category": "feelings",
+    "sentence": "I feel tired at night.",
+    "level": "L1"
+  },
+  {
+    "id": "kite",
+    "word": "Kite",
+    "emoji": "🪁",
+    "category": "toys",
+    "sentence": "The kite flies high.",
+    "level": "L2"
+  },
+  {
+    "id": "doll",
+    "word": "Doll",
+    "emoji": "🪆",
+    "category": "toys",
+    "sentence": "I play with my doll.",
+    "level": "L2"
+  },
+  {
+    "id": "car",
+    "word": "Car",
+    "emoji": "🚗",
+    "category": "toys",
+    "sentence": "The little car goes fast.",
+    "level": "L2"
+  },
+  {
+    "id": "blocks",
+    "word": "Blocks",
+    "emoji": "🧱",
+    "category": "toys",
+    "sentence": "I build a tower with blocks.",
+    "level": "L2"
+  },
+  {
+    "id": "teddy",
+    "word": "Teddy Bear",
+    "emoji": "🧸",
+    "category": "toys",
+    "sentence": "My teddy bear is soft.",
+    "level": "L2"
+  },
+  {
+    "id": "eat",
+    "word": "Eat",
+    "emoji": "🍽️",
+    "category": "actions",
+    "sentence": "I eat my food.",
+    "level": "L2"
+  },
+  {
+    "id": "drink",
+    "word": "Drink",
+    "emoji": "🥛",
+    "category": "actions",
+    "sentence": "I drink some water.",
+    "level": "L2"
+  },
+  {
+    "id": "jump",
+    "word": "Jump",
+    "emoji": "🦘",
+    "category": "actions",
+    "sentence": "I can jump up high.",
+    "level": "L2"
+  },
+  {
+    "id": "clap",
+    "word": "Clap",
+    "emoji": "👏",
+    "category": "actions",
+    "sentence": "We clap our hands.",
+    "level": "L2"
+  },
+  {
+    "id": "bag",
+    "word": "Bag",
+    "emoji": "🎒",
+    "category": "everyday",
+    "sentence": "My bag is heavy.",
+    "level": "L2"
+  },
+  {
+    "id": "shoe",
+    "word": "Shoe",
+    "emoji": "👟",
+    "category": "everyday",
+    "sentence": "I put on my shoe.",
+    "level": "L2"
+  },
+  {
+    "id": "spoon",
+    "word": "Spoon",
+    "emoji": "🥄",
+    "category": "everyday",
+    "sentence": "I eat soup with a spoon.",
+    "level": "L2"
+  },
+  {
+    "id": "door",
+    "word": "Door",
+    "emoji": "🚪",
+    "category": "everyday",
+    "sentence": "Please close the door.",
+    "level": "L2"
+  },
+  {
+    "id": "pencil",
+    "word": "Pencil",
+    "emoji": "✏️",
+    "category": "everyday",
+    "sentence": "I write with a pencil.",
+    "level": "L2"
+  },
+  {
+    "id": "sun",
+    "word": "Sun",
+    "emoji": "☀️",
+    "category": "nature",
+    "sentence": "The sun is warm.",
+    "level": "L2"
+  },
+  {
+    "id": "moon",
+    "word": "Moon",
+    "emoji": "🌙",
+    "category": "nature",
+    "sentence": "The moon shines at night.",
+    "level": "L2"
+  },
+  {
+    "id": "star",
+    "word": "Star",
+    "emoji": "⭐",
+    "category": "nature",
+    "sentence": "I can see one star.",
+    "level": "L2"
+  },
+  {
+    "id": "flower",
+    "word": "Flower",
+    "emoji": "🌸",
+    "category": "nature",
+    "sentence": "The flower is pink.",
+    "level": "L2"
+  },
+  {
+    "id": "rain",
+    "word": "Rain",
+    "emoji": "🌧️",
+    "category": "nature",
+    "sentence": "Rain helps the tree grow.",
+    "level": "L2"
   }
 ]

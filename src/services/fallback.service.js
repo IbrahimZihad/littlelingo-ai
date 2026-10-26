@@ -1,31 +1,17 @@
-import { vocabulary } from '../data/curriculum.js';
+import { curriculumTopic, vocabulary } from '../data/curriculum.js';
 import { detectMode } from './mode-detection.service.js';
 import { safetyReply } from './safety.service.js';
 
 function findMentionedWord(message, level) {
   const text = String(message || '').toLowerCase();
+  // Children say "cats" and "apples"; the curriculum stores the singular card, so an
+  // optional trailing s is matched but "catch" still cannot match "cat".
   return vocabulary.find(item => item.level === level && item.word.length > 1
-    && new RegExp(`(^|[^a-z0-9])${item.word.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`).test(text));
-}
-
-function topicFromMessage(message) {
-  const text = String(message || '').trim().toLowerCase();
-  const topics = [
-    ['numbers', /\b(numbers?|count(?:ing)?)\b/i],
-    ['alphabet', /\b(alphabet|letters?|sounds?)\b/i],
-    ['colors', /\b(colou?rs?)\b/i],
-    ['animals', /\b(animals?|pets?)\b/i],
-    ['fruits', /\b(fruits?)\b/i],
-    ['word-building', /\b(word building|blend(?:ing)?|sounds make words)\b/i],
-    ['sentences', /\b(sentences?|sentence building)\b/i],
-    ['reading', /\b(stories|story|reading|read)\b/i],
-    ['fill-blanks', /\b(fill in the blanks?|fill the blanks?)\b/i]
-  ];
-  return topics.find(([, pattern]) => pattern.test(text))?.[0] || null;
+    && new RegExp(`(^|[^a-z0-9])${item.word.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?([^a-z0-9]|$)`).test(text));
 }
 
 function requestedTopic(message, context) {
-  const currentTopic = topicFromMessage(message);
+  const currentTopic = curriculumTopic(message);
   if (currentTopic) return currentTopic;
 
   const shortFollowUp = String(message || '').trim().split(/\s+/).length <= 4;
@@ -33,7 +19,7 @@ function requestedTopic(message, context) {
 
   for (const turn of [...(context.recentTurns || [])].reverse()) {
     if (turn.role !== 'child') continue;
-    const previousTopic = topicFromMessage(turn.text);
+    const previousTopic = curriculumTopic(turn.text);
     if (previousTopic && /\b(tell me about|what about|more about|learn about|teach me about)\b/i.test(turn.text)) {
       return previousTopic;
     }
@@ -69,10 +55,12 @@ function topicReply(topic, context) {
 
 function learningReply(message, context, text) {
   if (/\b(practice|say it|use it in a simple sentence)\b/.test(text)) {
-    const match = String(message || '').match(/(?:practice (?:the )?word|practice)\s+([a-z]+)\b/i);
-    const word = match && !['this', 'that', 'it', 'word'].includes(match[1].toLowerCase())
-      ? match[1]
-      : null;
+    // The capture is a guess over free text. "practice the word 42 (forty-two)"
+    // yields "the", which must fall through to the item already resolved
+    // server-side from the submitted itemId rather than be taught as a word.
+    const captured = String(message || '').match(/(?:practice (?:the )?word|practice)\s+([a-z]+)\b/i)?.[1];
+    const notAVocabularyWord = new Set(['this', 'that', 'it', 'word', 'words', 'the', 'a', 'an', 'number', 'numbers', 'letter', 'letters', 'name', 'sentence', 'new', 'again', 'sound', 'sounds', 'with', 'and', 'to', 'of', 'my']);
+    const word = captured && !notAVocabularyWord.has(captured.toLowerCase()) ? captured : null;
     if (word) {
       const examples = { cat: 'The cat is cute.', dog: 'The dog can run.', bird: 'The bird can fly.', fish: 'The fish can swim.', apple: 'I eat an apple.', ball: 'I play with a ball.' };
       const sentence = examples[word.toLowerCase()] || `I see a ${word.toLowerCase()}.`;
@@ -88,6 +76,13 @@ function learningReply(message, context, text) {
 
   if (item) {
     return `Let's explore ${item.word}! ${item.sentence} Can you say ${item.word}?`;
+  }
+  // A child who asks for a topic should be taught that topic rather than a word drawn
+  // at random from their level.
+  const topic = curriculumTopic(message) || curriculumTopic(context.currentTopic);
+  if (topic) {
+    const taught = topicReply(topic, context);
+    if (taught) return taught;
   }
   if (/\b(color|colour)\b/.test(text)) {
     return "Let's explore colors! Red, blue, yellow, and green are bright colors. Which color do you like?";
@@ -152,12 +147,12 @@ export function fallbackReply(message, context = {}) {
   } else {
     const topic = requestedTopic(message, context);
     reply = topic ? topicReply(topic, context) : null;
-    if (!reply) {
-      const mentionedWord = findMentionedWord(message, context.level || 'L1');
-      reply = mentionedWord
-        ? `${mentionedWord.word}: ${mentionedWord.sentence} What do you think about it?`
-        : null;
-    }
+  }
+  // A child who names something they are learning about should hear about that thing,
+  // whatever mode the message was classified as and whatever the app was about to say.
+  if (!reply) {
+    const mentionedWord = findMentionedWord(message, context.level || 'L1');
+    if (mentionedWord) reply = `${mentionedWord.word}: ${mentionedWord.sentence} What do you think about it?`;
   }
   if (!reply && /\b(anything|something|fun fact|tell me about)\b/.test(text)) {
     reply = "Did you know a tiny seed can grow into a plant with water and sunshine? 🌱 What would you like to discover next?";
