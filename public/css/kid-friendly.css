@@ -1683,6 +1683,19 @@ body {
   color: #075f98;
 }
 
+/* The sign-in and landing screens are shorter than a desktop viewport, so a footer that
+   only follows the content stops mid-page with bare background under it. */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
 footer {
   border-top: 1px solid #dce7f0;
   background: #12324e;
